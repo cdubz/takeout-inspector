@@ -7,6 +7,28 @@ class Parser:
         self.email = mailbox.mbox(mbox_file)
         self.conn = sqlite3.connect(db_file)
 
+    def import_message_headers(self):
+        c = self.conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS headers(
+              message_key INT,
+              header TEXT,
+              value TEXT
+             );
+         ''')
+        self.conn.commit()
+
+        count = 0
+        for key, message in self.email.items():
+            for header, value in message.items():
+                c.execute('''INSERT INTO headers VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
+            count += 1
+            if count > 100000000:
+                self.conn.commit()
+                count = 0
+
+        self.conn.commit()
+
     def create_headers_occurrences_table(self):
         c = self.conn.cursor()
         c.execute('''
@@ -27,4 +49,4 @@ class Parser:
         for header, occurrences in headers.iteritems():
             c.execute('''INSERT INTO headers_occurrences VALUES(?, ?);''', (header, occurrences))
 
-        self.conn.commit();
+        self.conn.commit()
