@@ -2,7 +2,7 @@ import mailbox
 import sqlite3
 
 
-class Parser:
+class Importer:
     def __init__(self, mbox_file, db_file):
         self.email = mailbox.mbox(mbox_file)
         self.conn = sqlite3.connect(db_file)
