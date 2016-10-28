@@ -6,21 +6,35 @@ class Importer:
     def __init__(self, mbox_file, db_file):
         self.email = mailbox.mbox(mbox_file)
         self.conn = sqlite3.connect(db_file)
+        self.create_tables()
 
-    def import_messages(self):
+    # Create the structure for data storage. Indexes will be added by individual functions to (hopefully) optimize
+    # performance.
+    def create_tables(self):
         c = self.conn.cursor()
         c.execute('''
-                    CREATE TABLE IF NOT EXISTS messages(
-                      `message_key` INT,
-                      `from` TEXT,
-                      `to` TEXT,
-                      `subject` TEXT,
-                      `date` TEXT,
-                      `gmail_thread_id` INT,
-                      `gmail_labels` TEXT
-                     );
-                 ''')
+            CREATE TABLE IF NOT EXISTS messages(
+              `message_key` INT,
+              `from` TEXT,
+              `to` TEXT,
+              `subject` TEXT,
+              `date` TEXT,
+              `gmail_thread_id` INT,
+              `gmail_labels` TEXT
+             );
+        ''')
+        c.execute('''
+             CREATE TABLE IF NOT EXISTS headers(
+              `message_key` INT,
+              `header` TEXT,
+              `value` TEXT
+             );
+        ''')
         self.conn.commit()
+
+    # Import message keys and important headers to create an index of messages.
+    def import_messages(self):
+        c = self.conn.cursor()
 
         count = 0
         for key, message in self.email.items():
@@ -41,16 +55,9 @@ class Importer:
 
         self.conn.commit()
 
+    # Import all headers for each message.
     def import_message_headers(self):
         c = self.conn.cursor()
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS headers(
-              `message_key` INT,
-              `header` TEXT,
-              `value` TEXT
-             );
-         ''')
-        self.conn.commit()
 
         count = 0
         for key, message in self.email.items():
