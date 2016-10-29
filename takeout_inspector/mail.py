@@ -27,6 +27,8 @@ import mailbox
 import email
 import sqlite3
 
+from datetime import datetime
+
 
 class Import:
     """Parses and imports Google Takeout mbox file data in to sqlite."""
@@ -36,7 +38,7 @@ class Import:
         self.create_tables()
 
     def create_tables(self):
-        """Creates the required sqlite tables without indexes. Indexes will be added after data is imported."""
+        """Creates the required tables for message data storage. Indexes will be added after data import."""
         c = self.conn.cursor()
         c.execute('''
             CREATE TABLE IF NOT EXISTS messages(
@@ -44,16 +46,18 @@ class Import:
               `from` TEXT,
               `to` TEXT,
               `subject` TEXT,
-              `date` TEXT,
+              `date` DATETIME,
               `gmail_thread_id` INT,
-              `gmail_labels` TEXT
+              `gmail_labels` TEXT,
+
              );
         ''')
         c.execute('''
              CREATE TABLE IF NOT EXISTS headers(
               `message_key` INT,
               `header` TEXT,
-              `value` TEXT
+              `value` TEXT,
+              FOREIGN KEY(`message_key`) REFERENCES messages(`message_key`)
              );
         ''')
         self.conn.commit()
@@ -83,19 +87,21 @@ class Import:
                 self.conn.commit()
                 query_count = 0
 
+        c.execute('''CREATE INDEX `id_date` ON `messages` (`date` DESC)''')
+
         self.conn.commit()
 
     def _parse_datetime(self, message):
-        """Finds date and time information for `message` and converts it to a standard form and timezone (UTC)."""
+        """Finds date and time information for `message` and converts it to ISO-8601 format and UTC timezone."""
         mail_date = message.get('Date', message.get('date', message.get('DATE', ''))).decode('utf-8')
         if not mail_date:
             # The get_from() result always (so far as I have seen) has the date string in the last 30 characters
             mail_date = message.get_from().strip()[-30:]
 
-        mail_date_utc = ''
+        mail_date_iso8601 = ''
         if mail_date:
             datetime_tuple = email.utils.parsedate_tz(mail_date)
-            datetime = email.utils.mktime_tz(datetime_tuple)
-            mail_date_utc = email.utils.formatdate(datetime)
+            unix_time = email.utils.mktime_tz(datetime_tuple)
+            mail_date_iso8601 = datetime.utcfromtimestamp(unix_time).isoformat(' ')
 
-        return mail_date_utc
+        return mail_date_iso8601
