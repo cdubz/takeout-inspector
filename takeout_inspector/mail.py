@@ -62,7 +62,7 @@ class Import:
         """Imports keys and important headers to use as an index of all messages."""
         c = self.conn.cursor()
 
-        count = 0
+        query_count = 0
         for key, message in self.email.items():
             mail_from = message.get('From', message.get('from', message.get('FROM', ''))).decode('utf-8')
             mail_to = message.get('To', message.get('to', message.get('TO', ''))).decode('utf-8')
@@ -73,9 +73,9 @@ class Import:
 
             c.execute('''INSERT INTO `messages` VALUES(?, ?, ?, ?, ?, ?, ?);''',
                       (key, mail_from, mail_to, mail_subject, mail_date_utc, mail_gmail_id, mail_gmail_labels))
+            query_count += 1
 
-            count += 1
-            if count > 100000000:
+            if query_count > 100000000:
                 self.conn.commit()
                 count = 0
 
@@ -85,14 +85,15 @@ class Import:
         """Imports all headers for all messages."""
         c = self.conn.cursor()
 
-        count = 0
+        query_count = 0
         for key, message in self.email.items():
             for header, value in message.items():
                 c.execute('''INSERT INTO `headers` VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
-            count += 1
-            if count > 100000000:
+                query_count += 1
+
+            if query_count > 100000000:
                 self.conn.commit()
-                count = 0
+                query_count = 0
 
         self.conn.commit()
 
