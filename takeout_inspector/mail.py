@@ -1,7 +1,6 @@
-"""importers/sqlite.py
+"""takeout_inspector/mail.py
 
-Defines the classes and methods used to parse and import information from an mbox file (specifically from a Gmail
-export) in to an sql database.
+Defines classes and methods used to parse a Gmail mbox file from Google Takeout and import data in to an sql database.
 
 Copyright (c) 2016 Christopher Charbonneau Wells
 
@@ -29,8 +28,8 @@ import email
 import sqlite3
 
 
-class Importer:
-    """Parses and imports data in to sqlite."""
+class Import:
+    """Parses and imports Google Takeout mbox file data in to sqlite."""
     def __init__(self, mbox_file, db_file):
         self.email = mailbox.mbox(mbox_file)
         self.conn = sqlite3.connect(db_file)
