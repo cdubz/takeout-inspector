@@ -1,4 +1,5 @@
 import mailbox
+import email
 import sqlite3
 
 
@@ -41,12 +42,12 @@ class Importer:
             mail_from = message.get('From', message.get('from', message.get('FROM', ''))).decode('utf-8')
             mail_to = message.get('To', message.get('to', message.get('TO', ''))).decode('utf-8')
             mail_subject = message.get('Subject', message.get('subject', message.get('SUBJECT', ''))).decode('utf-8')
-            mail_date = message.get('Date', message.get('date', message.get('DATE', ''))).decode('utf-8')
+            mail_date_utc = self._parse_datetime(message)
             mail_gmail_id = message.get('X-GM-THRID', '')
             mail_gmail_labels = message.get('X-Gmail-Labels', '').decode('utf-8')
 
             c.execute('''INSERT INTO `messages` VALUES(?, ?, ?, ?, ?, ?, ?);''',
-                      (key, mail_from, mail_to, mail_subject, mail_date, mail_gmail_id, mail_gmail_labels))
+                      (key, mail_from, mail_to, mail_subject, mail_date_utc, mail_gmail_id, mail_gmail_labels))
 
             count += 1
             if count > 100000000:
@@ -69,3 +70,18 @@ class Importer:
                 count = 0
 
         self.conn.commit()
+
+    # Find from datetime (may be in mailbox.Message.get_from() for Chat messages) and standard form and TZ (UTC).
+    def _parse_datetime(self, message):
+        mail_date = message.get('Date', message.get('date', message.get('DATE', ''))).decode('utf-8')
+        if not mail_date:
+            # The get_from() result always (so far as I have seen) has the date string in the last 30 characters
+            mail_date = message.get_from().strip()[-30:]
+
+        mail_date_utc = ''
+        if mail_date:
+            datetime_tuple = email.utils.parsedate_tz(mail_date)
+            datetime = email.utils.mktime_tz(datetime_tuple)
+            mail_date_utc = email.utils.formatdate(datetime)
+
+        return mail_date_utc
