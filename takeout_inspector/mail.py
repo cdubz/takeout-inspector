@@ -59,11 +59,15 @@ class Import:
         self.conn.commit()
 
     def import_messages(self):
-        """Imports keys and important headers to use as an index of all messages."""
+        """Imports message details in to the `messages` table and all message headers in to the `headers` table."""
         c = self.conn.cursor()
 
         query_count = 0
         for key, message in self.email.items():
+            for header, value in message.items():
+                c.execute('''INSERT INTO `headers` VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
+                query_count += 1
+
             mail_from = message.get('From', message.get('from', message.get('FROM', ''))).decode('utf-8')
             mail_to = message.get('To', message.get('to', message.get('TO', ''))).decode('utf-8')
             mail_subject = message.get('Subject', message.get('subject', message.get('SUBJECT', ''))).decode('utf-8')
@@ -78,22 +82,6 @@ class Import:
             if query_count > 100000000:
                 self.conn.commit()
                 count = 0
-
-        self.conn.commit()
-
-    def import_message_headers(self):
-        """Imports all headers for all messages."""
-        c = self.conn.cursor()
-
-        query_count = 0
-        for key, message in self.email.items():
-            for header, value in message.items():
-                c.execute('''INSERT INTO `headers` VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
-                query_count += 1
-
-            if query_count > 100000000:
-                self.conn.commit()
-                query_count = 0
 
         self.conn.commit()
 
