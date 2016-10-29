@@ -81,7 +81,7 @@ class Import:
 
             if query_count > 100000000:
                 self.conn.commit()
-                count = 0
+                query_count = 0
 
         self.conn.commit()
 
