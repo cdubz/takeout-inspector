@@ -1,17 +1,43 @@
+"""importers/sqlite.py
+
+Defines the classes and methods used to parse and import information from an mbox file (specifically from a Gmail
+export) in to an sql database.
+
+Copyright (c) 2016 Christopher Charbonneau Wells
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+"""
 import mailbox
 import email
 import sqlite3
 
 
 class Importer:
+    """Parses and imports data in to sqlite."""
     def __init__(self, mbox_file, db_file):
         self.email = mailbox.mbox(mbox_file)
         self.conn = sqlite3.connect(db_file)
         self.create_tables()
 
-    # Create the structure for data storage. Indexes will be added by individual functions to (hopefully) optimize
-    # performance.
     def create_tables(self):
+        """Creates the required sqlite tables without indexes. Indexes will be added after data is imported."""
         c = self.conn.cursor()
         c.execute('''
             CREATE TABLE IF NOT EXISTS messages(
@@ -33,8 +59,8 @@ class Importer:
         ''')
         self.conn.commit()
 
-    # Import message keys and important headers to create an index of messages.
     def import_messages(self):
+        """Imports keys and important headers to use as an index of all messages."""
         c = self.conn.cursor()
 
         count = 0
@@ -56,8 +82,8 @@ class Importer:
 
         self.conn.commit()
 
-    # Import all headers for each message.
     def import_message_headers(self):
+        """Imports all headers for all messages."""
         c = self.conn.cursor()
 
         count = 0
@@ -71,8 +97,8 @@ class Importer:
 
         self.conn.commit()
 
-    # Find from datetime (may be in mailbox.Message.get_from() for Chat messages) and standard form and TZ (UTC).
     def _parse_datetime(self, message):
+        """Finds date and time information for `message` and converts it to a standard form and timezone (UTC)."""
         mail_date = message.get('Date', message.get('date', message.get('DATE', ''))).decode('utf-8')
         if not mail_date:
             # The get_from() result always (so far as I have seen) has the date string in the last 30 characters
