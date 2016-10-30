@@ -125,6 +125,11 @@ class Import:
         mail_all_cc = message.get_all('CC', [])
         unique_recipients = list(set(email.utils.getaddresses(mail_all_to + mail_all_cc)))
         for name, address in unique_recipients:
+            """Remove the Resourcepart from XMPP addresses.
+
+            https://xmpp.org/rfcs/rfc6122.html#addressing-resource
+            """
+            address = address.split('/', 1)[0]
 
             if self.anonymize:
                 if address not in self.anonymize_key:
