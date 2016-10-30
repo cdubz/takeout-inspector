@@ -110,8 +110,8 @@ class Import:
         if self.anonymize:
             for real_address, anon_info in self.anonymize_key.iteritems():
                 c.execute('''INSERT INTO `anonymize_key` VALUES(?, ?, ?, ?);''',
-                          (anon_info[0].decode('utf-8'), anon_info[1].decode('utf-8'),
-                           anon_info[2].decode('utf-8'), anon_info[3].decode('utf-8')))
+                          (anon_info['address'].decode('utf-8'), anon_info['anon_address'],
+                           anon_info['name'].decode('utf-8'), anon_info['anon_name']))
 
         c.execute('''CREATE INDEX `id_date` ON `messages` (`date` DESC)''')
 
@@ -123,7 +123,7 @@ class Import:
         """
         mail_all_to = message.get_all('To', [])
         mail_all_cc = message.get_all('CC', [])
-        unique_recipients = list(set(email.utils.getaddresses(mail_all_to + mail_all_cc)))
+        unique_recipients = self._parse_addresses(mail_all_to + mail_all_cc)
         for name, address in unique_recipients:
             """Remove the Resourcepart from XMPP addresses.
 
@@ -132,11 +132,9 @@ class Import:
             address = address.split('/', 1)[0]
 
             if self.anonymize:
-                if address not in self.anonymize_key:
-                    anon_name = str(uuid.uuid4())
-                    self.anonymize_key[address] = [address, anon_name + '@domain.tld', name, anon_name]
-                name = self.anonymize_key[address][3]
-                address = self.anonymize_key[address][1]
+                anonymized_address = self._anonymize_address(name, address)
+                name = anonymized_address['anon_name']
+                address = anonymized_address['anon_address']
 
             c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?);''',
                       (key, name.decode('utf-8'), address.decode('utf-8')))
@@ -162,6 +160,34 @@ class Import:
         c.execute('''INSERT INTO `messages` VALUES(?, ?, ?, ?, ?, ?, ?);''',
                   (key, mail_from, mail_to, mail_subject, mail_date_utc, mail_gmail_id, mail_gmail_labels))
         self.query_count += 1
+
+    def _anonymize_address(self, address, name):
+        """Turns a name and address in to an anonymized [address, anon_address, name, anon_name] dict and adds it to
+        self.anonymize_key with address as the key (if it does not already exist). Returns the full dict.
+
+        As a side effect, this process will only use the first name it encounters for any particular email. Not ideal,
+        but also not a big deal as long as the actual unique identifer (the email) is preserved.
+        """
+        if address not in self.anonymize_key:
+            anon_name = str(uuid.uuid4())
+            self.anonymize_key[address] = {
+                'address': address,
+                'anon_address': anon_name + '@domain.tld',
+                'name': name,
+                'anon_name': anon_name
+            }
+        return self.anonymize_key[address]
+
+    def _parse_addresses(self, addresses, unique=True):
+        """Turns a list of address strings (e.g. from email.Message.get_all()) in to a list of [name, address] tuples.
+
+        Keyword arguments:
+            unique -- Produces a list of unique entries by email address.
+        """
+        addresses = email.utils.getaddresses(addresses)
+        if unique:
+            addresses = list(set(addresses))
+        return addresses
 
     def _get_message_date(self, message):
         """Finds date and time information for `message` and converts it to ISO-8601 format and UTC timezone.
