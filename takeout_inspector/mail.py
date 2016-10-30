@@ -26,16 +26,25 @@ SOFTWARE.
 import mailbox
 import email
 import sqlite3
+import uuid
 
 from datetime import datetime
 
 
 class Import:
     """Parses and imports Google Takeout mbox file data in to sqlite.
+
+    Keyword arguments:
+        anonymize -- Replace email addresses with one-to-one randomized addresses in database tables.
     """
-    def __init__(self, mbox_file, db_file):
+    def __init__(self, mbox_file, db_file, anonymize=True):
         self.email = mailbox.mbox(mbox_file)
         self.conn = sqlite3.connect(db_file)
+
+        self.anonymize = bool(anonymize)
+        if anonymize:
+            self.anonymize_key = {}
+
         self._create_tables()
         self.query_count = 0
 
@@ -43,6 +52,7 @@ class Import:
         """Creates the required tables for message data storage. Indexes will be added after data import.
         """
         c = self.conn.cursor()
+
         c.execute('''
             CREATE TABLE IF NOT EXISTS messages(
               `message_key` INT PRIMARY KEY,
@@ -70,6 +80,15 @@ class Import:
               FOREIGN KEY(`message_key`) REFERENCES messages(`message_key`)
              );
         ''')
+
+        if self.anonymize:
+            c.execute('''
+                 CREATE TABLE IF NOT EXISTS anonymize_key(
+                  `anon_address` TEXT,
+                  `real_address` TEXT
+                 );
+            ''')
+
         self.conn.commit()
 
     def import_messages(self):
@@ -81,6 +100,15 @@ class Import:
             self._insert_messages(c, key, message)
             self._insert_headers(c, key, message)
             self._insert_recipients(c, key, message)
+
+            if self.query_count > 100000000:
+                self.conn.commit()
+                self.query_count = 0
+
+        if self.anonymize:
+            for real_address, anon_address in self.anonymize_key.iteritems():
+                c.execute('''INSERT INTO `anonymize_key` VALUES(?, ?);''',
+                          (real_address.decode('utf-8'), anon_address.decode('utf-8')))
 
         c.execute('''CREATE INDEX `id_date` ON `messages` (`date` DESC)''')
 
@@ -94,13 +122,15 @@ class Import:
         mail_all_cc = message.get_all('CC', [])
         unique_recipients = list(set(email.utils.getaddresses(mail_all_to + mail_all_cc)))
         for name, address in unique_recipients:
+
+            if self.anonymize:
+                if address not in self.anonymize_key:
+                    self.anonymize_key[address] = str(uuid.uuid4()) + '@domain.tld'
+                address = self.anonymize_key[address]
+
             c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?);''',
                       (key, name.decode('utf-8'), address.decode('utf-8')))
             self.query_count += 1
-
-        if self.query_count > 100000000:
-            self.conn.commit()
-            self.query_count = 0
 
     def _insert_headers(self, c, key, message):
         """Adds all headers to `headers`.
