@@ -48,7 +48,7 @@ class Import:
               `subject` TEXT,
               `date` DATETIME,
               `gmail_thread_id` INT,
-              `gmail_labels` TEXT,
+              `gmail_labels` TEXT
 
              );
         ''')
@@ -72,9 +72,9 @@ class Import:
                 c.execute('''INSERT INTO `headers` VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
                 query_count += 1
 
-            mail_from = message.get('From', message.get('from', message.get('FROM', ''))).decode('utf-8')
-            mail_to = message.get('To', message.get('to', message.get('TO', ''))).decode('utf-8')
-            mail_subject = message.get('Subject', message.get('subject', message.get('SUBJECT', ''))).decode('utf-8')
+            mail_from = message.get('From', '').decode('utf-8')
+            mail_to = message.get('To', '').decode('utf-8')
+            mail_subject = message.get('Subject', '').decode('utf-8')
             mail_date_utc = self._get_message_date(message)
             mail_gmail_id = message.get('X-GM-THRID', '')
             mail_gmail_labels = message.get('X-Gmail-Labels', '').decode('utf-8')
@@ -93,7 +93,7 @@ class Import:
 
     def _get_message_date(self, message):
         """Finds date and time information for `message` and converts it to ISO-8601 format and UTC timezone."""
-        mail_date = message.get('Date', message.get('date', message.get('DATE', ''))).decode('utf-8')
+        mail_date = message.get('Date', '').decode('utf-8')
         if not mail_date:
             # The get_from() result always (so far as I have seen) has the date string in the last 30 characters
             mail_date = message.get_from().strip()[-30:]
