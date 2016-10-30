@@ -125,23 +125,15 @@ class Import:
         mail_all_cc = message.get_all('CC', [])
         unique_recipients = self._parse_addresses(mail_all_to + mail_all_cc)
         for name, address in unique_recipients:
-            """Remove the Resourcepart from XMPP addresses.
-
-            https://xmpp.org/rfcs/rfc6122.html#addressing-resource
-            """
-            address = address.split('/', 1)[0]
-
-            if self.anonymize:
-                anonymized_address = self._anonymize_address(name, address)
-                name = anonymized_address['anon_name']
-                address = anonymized_address['anon_address']
-
             c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?);''',
                       (key, name.decode('utf-8'), address.decode('utf-8')))
             self.query_count += 1
 
     def _insert_headers(self, c, key, message):
         """Adds all headers to `headers`.
+
+        WARNING: Data in this table does _not_ currently respect the self.anonymize setting. This is meant to be a raw
+        record of all headers.
         """
         for header, value in message.items():
             c.execute('''INSERT INTO `headers` VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
@@ -150,24 +142,34 @@ class Import:
     def _insert_messages(self, c, key, message):
         """Creates a basic index of important message data in `messages`.
         """
-        mail_from = message.get('From', '').decode('utf-8')
-        mail_to = message.get('To', '').decode('utf-8')
-        mail_subject = message.get('Subject', '').decode('utf-8')
+        mail_from = ''
+        for idx, address in enumerate(self._parse_addresses(message.get_all('From', []))):
+            mail_from += email.utils.formataddr(address) + ','  # Final ',' is removed at INSERT below.
+
+        mail_to = ''
+        for idx, address in enumerate(self._parse_addresses(message.get_all('To', []))):
+            mail_to += email.utils.formataddr(address) + ','  # Final ',' is removed at INSERT below.
+
+        mail_subject = message.get('Subject', '')
         mail_date_utc = self._get_message_date(message)
         mail_gmail_id = message.get('X-GM-THRID', '')
-        mail_gmail_labels = message.get('X-Gmail-Labels', '').decode('utf-8')
+        mail_gmail_labels = message.get('X-Gmail-Labels', '')
 
         c.execute('''INSERT INTO `messages` VALUES(?, ?, ?, ?, ?, ?, ?);''',
-                  (key, mail_from, mail_to, mail_subject, mail_date_utc, mail_gmail_id, mail_gmail_labels))
+                  (key, mail_from[:-1].decode('utf-8'), mail_to[:-1].decode('utf-8'), mail_subject.decode('utf-8'),
+                   mail_date_utc, mail_gmail_id, mail_gmail_labels.decode('utf-8')))
         self.query_count += 1
 
     def _anonymize_address(self, address, name):
         """Turns a name and address in to an anonymized [address, anon_address, name, anon_name] dict and adds it to
         self.anonymize_key with address as the key (if it does not already exist). Returns the full dict.
 
-        As a side effect, this process will only use the first name it encounters for any particular email. Not ideal,
+        As a side effect, this method will only use the first name it encounters for any particular email. Not ideal,
         but also not a big deal as long as the actual unique identifer (the email) is preserved.
+
+        TODO: This should probably also standardize letter case in addresses to further improve associations.
         """
+
         if address not in self.anonymize_key:
             anon_name = str(uuid.uuid4())
             self.anonymize_key[address] = {
@@ -181,12 +183,25 @@ class Import:
     def _parse_addresses(self, addresses, unique=True):
         """Turns a list of address strings (e.g. from email.Message.get_all()) in to a list of [name, address] tuples.
 
+        Also removes XMPP Resourceparts from addresses (https://xmpp.org/rfcs/rfc6122.html) and respects self.anonymize
+        by passing name and address pairs through self._anonymize_address
+
         Keyword arguments:
             unique -- Produces a list of unique entries by email address.
         """
         addresses = email.utils.getaddresses(addresses)
         if unique:
             addresses = list(set(addresses))
+
+        for idx, address in enumerate(addresses):
+            name = address[0]
+            address = address[1].split('/', 1)[0]  # Removes XMPP Resourcepart
+            if self.anonymize:
+                anonymized_address = self._anonymize_address(address, name)
+                name = anonymized_address['anon_name']
+                address = anonymized_address['anon_address']
+            addresses[idx] = [name, address]
+
         return addresses
 
     def _get_message_date(self, message):
