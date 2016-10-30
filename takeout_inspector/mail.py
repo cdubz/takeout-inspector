@@ -84,8 +84,10 @@ class Import:
         if self.anonymize:
             c.execute('''
                  CREATE TABLE IF NOT EXISTS anonymize_key(
+                  `real_address` TEXT,
                   `anon_address` TEXT,
-                  `real_address` TEXT
+                  `real_name` TEXT,
+                  `anon_name` TEXT
                  );
             ''')
 
@@ -106,9 +108,10 @@ class Import:
                 self.query_count = 0
 
         if self.anonymize:
-            for real_address, anon_address in self.anonymize_key.iteritems():
-                c.execute('''INSERT INTO `anonymize_key` VALUES(?, ?);''',
-                          (real_address.decode('utf-8'), anon_address.decode('utf-8')))
+            for real_address, anon_info in self.anonymize_key.iteritems():
+                c.execute('''INSERT INTO `anonymize_key` VALUES(?, ?, ?, ?);''',
+                          (anon_info[0].decode('utf-8'), anon_info[1].decode('utf-8'),
+                           anon_info[2].decode('utf-8'), anon_info[3].decode('utf-8')))
 
         c.execute('''CREATE INDEX `id_date` ON `messages` (`date` DESC)''')
 
@@ -125,8 +128,10 @@ class Import:
 
             if self.anonymize:
                 if address not in self.anonymize_key:
-                    self.anonymize_key[address] = str(uuid.uuid4()) + '@domain.tld'
-                address = self.anonymize_key[address]
+                    anon_name = str(uuid.uuid4())
+                    self.anonymize_key[address] = [address, anon_name + '@domain.tld', name, anon_name]
+                name = self.anonymize_key[address][3]
+                address = self.anonymize_key[address][1]
 
             c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?);''',
                       (key, name.decode('utf-8'), address.decode('utf-8')))
