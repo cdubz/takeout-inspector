@@ -103,7 +103,7 @@ class Import:
             self._insert_headers(c, key, message)
             self._insert_recipients(c, key, message)
 
-            if self.query_count > 100000000:
+            if self.query_count > 1000000:
                 self.conn.commit()
                 self.query_count = 0
 
