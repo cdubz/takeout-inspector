@@ -166,10 +166,7 @@ class Import:
 
         As a side effect, this method will only use the first name it encounters for any particular email. Not ideal,
         but also not a big deal as long as the actual unique identifer (the email) is preserved.
-
-        TODO: This should probably also standardize letter case in addresses to further improve associations.
         """
-
         if address not in self.anonymize_key:
             anon_name = str(uuid.uuid4())
             self.anonymize_key[address] = {
@@ -181,10 +178,11 @@ class Import:
         return self.anonymize_key[address]
 
     def _parse_addresses(self, addresses, unique=True):
-        """Turns a list of address strings (e.g. from email.Message.get_all()) in to a list of [name, address] tuples.
-
-        Also removes XMPP Resourceparts from addresses (https://xmpp.org/rfcs/rfc6122.html) and respects self.anonymize
-        by passing name and address pairs through self._anonymize_address
+        """Turns a list of address strings (e.g. from email.Message.get_all()) in to a list of formatted [name, address]
+        tuples. Formatting does the following:
+            1) Removes XMPP Resourceparts (https://xmpp.org/rfcs/rfc6122.html).
+            2) Removes periods from the local part for @gmail.com addresses.
+            3) Converts the full address to lower case.
 
         Keyword arguments:
             unique -- Produces a list of unique entries by email address.
@@ -195,11 +193,19 @@ class Import:
 
         for idx, address in enumerate(addresses):
             name = address[0]
-            address = address[1].split('/', 1)[0]  # Removes XMPP Resourcepart
+            try:
+                [local_part, domain] = address[1].split('@', 1)
+                domain = domain.split('/', 1)[0].lower()  # Removes Resourcepart and normalizes case.
+                local_part = local_part.replace('.', '').lower()  # Removes dots and normalizes case.
+                address = local_part + '@' + domain
+            except ValueError:  # Throws when the address does not have an @ anywhere in the string.
+                address = address[1]
+
             if self.anonymize:
                 anonymized_address = self._anonymize_address(address, name)
                 name = anonymized_address['anon_name']
                 address = anonymized_address['anon_address']
+
             addresses[idx] = [name, address]
 
         return addresses
