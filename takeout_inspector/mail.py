@@ -23,11 +23,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 """
-import mailbox
 import email
+import mailbox
+import plotly.offline as py
+import plotly.graph_objs as go
 import sqlite3
 import uuid
 
+from collections import OrderedDict
 from datetime import datetime
 
 
@@ -226,3 +229,50 @@ class Import:
             mail_date_iso8601 = ''
 
         return mail_date_iso8601
+
+
+class Graph:
+    """Creates offline plotly graphs using imported data from sqlite.
+    """
+    def __init__(self, db_file):
+        self.conn = sqlite3.connect(db_file)
+
+    def top_recipients(self, limit=20):
+        c = self.conn.cursor()
+
+        c.execute('''SELECT address, COUNT(r.message_key) AS message_count
+            FROM recipients AS r
+            LEFT JOIN messages AS m ON(m.message_key = r.message_key)
+            WHERE m.gmail_labels LIKE '%Sent%'
+            GROUP BY address
+            ORDER BY message_count DESC
+            LIMIT ?''', (limit,))
+
+        addresses = OrderedDict()
+        for row in c.fetchall():
+            addresses[row[0]] = row[1]
+
+        py.plot([go.Bar(
+            x=addresses.keys(),
+            y=addresses.values())
+        ])
+
+    def top_senders(self, limit=20):
+        c = self.conn.cursor()
+
+        c.execute('''SELECT `from`, COUNT(message_key) AS message_count
+            FROM messages
+            WHERE gmail_labels NOT LIKE '%Sent%'
+                AND gmail_labels NOT LIKE '%Chat%'
+            GROUP BY `from`
+            ORDER BY message_count DESC
+            LIMIT ?''', (limit,))
+
+        addresses = OrderedDict()
+        for row in c.fetchall():
+            addresses[row[0]] = row[1]
+
+        py.plot([go.Bar(
+            x=addresses.keys(),
+            y=addresses.values())
+        ])
