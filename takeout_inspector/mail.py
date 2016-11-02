@@ -218,10 +218,11 @@ class Import:
             """The get_from() result always (so far as I have seen!) has the date string in the last 30 characters"""
             mail_date = message.get_from().strip()[-30:]
 
-        mail_date_iso8601 = ''
-        if mail_date:
-            datetime_tuple = email.utils.parsedate_tz(mail_date)
+        datetime_tuple = email.utils.parsedate_tz(mail_date)
+        if datetime_tuple:
             unix_time = email.utils.mktime_tz(datetime_tuple)
             mail_date_iso8601 = datetime.utcfromtimestamp(unix_time).isoformat(' ')
+        else:
+            mail_date_iso8601 = ''
 
         return mail_date_iso8601
