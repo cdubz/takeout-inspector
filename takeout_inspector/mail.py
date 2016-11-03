@@ -80,6 +80,7 @@ class Import:
               `message_key` INT,
               `name` TEXT,
               `address` TEXT,
+              `header` TEXT,
               FOREIGN KEY(`message_key`) REFERENCES messages(`message_key`)
              );
         ''')
@@ -125,11 +126,15 @@ class Import:
         `recipients` table.
         """
         mail_all_to = message.get_all('To', [])
+        for name, address in self._parse_addresses(mail_all_to):
+            c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?, ?);''',
+                      (key, name.decode('utf-8'), address.decode('utf-8'), 'To'))
+            self.query_count += 1
+
         mail_all_cc = message.get_all('CC', [])
-        unique_recipients = self._parse_addresses(mail_all_to + mail_all_cc)
-        for name, address in unique_recipients:
-            c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?);''',
-                      (key, name.decode('utf-8'), address.decode('utf-8')))
+        for name, address in self._parse_addresses(mail_all_cc):
+            c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?, ?);''',
+                      (key, name.decode('utf-8'), address.decode('utf-8'), 'CC'))
             self.query_count += 1
 
     def _insert_headers(self, c, key, message):
