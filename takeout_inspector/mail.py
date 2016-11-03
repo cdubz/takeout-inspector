@@ -243,6 +243,11 @@ class Graph:
         self.conn = sqlite3.connect(db_file)
 
     def top_recipients(self, limit=20):
+        """Creates a plotly bar graph show the top `limit` number of recipients of emails sent.
+
+        Keyword arguments:
+            limit -- Number of recipients to include.
+        """
         c = self.conn.cursor()
 
         c.execute('''SELECT address, COUNT(r.message_key) AS message_count
@@ -263,6 +268,11 @@ class Graph:
         ])
 
     def top_senders(self, limit=20):
+        """Creates a plotly bar graph show the top `limit` number of senders of emails received.
+
+        Keyword arguments:
+            limit -- Number of senders to include.
+        """
         c = self.conn.cursor()
 
         c.execute('''SELECT `from`, COUNT(message_key) AS message_count
