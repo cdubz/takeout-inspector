@@ -33,7 +33,6 @@ import uuid
 
 from collections import OrderedDict
 from datetime import datetime
-from itertools import imap
 
 
 class Import:
@@ -266,15 +265,15 @@ class Graph:
             LIMIT ?''', (limit,))
 
         addresses = OrderedDict()
+        longest_address = 0
         for row in c.fetchall():
             addresses[row[0]] = row[1]
-
-        longest_email = max(imap(len, addresses))
+            longest_address = max(longest_address, len(row[0]))
 
         (data, layout) = self._bar_defaults()
         data['x'] = addresses.values()
         data['y'] = addresses.keys()
-        layout['margin']['l'] = longest_email * self.config.getfloat('font', 'size')/1.55
+        layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Top Recipients'
         layout['xaxis']['title'] = 'Emails sent to'
@@ -302,15 +301,15 @@ class Graph:
             LIMIT ?''', (limit,))
 
         addresses = OrderedDict()
+        longest_address = 0
         for row in c.fetchall():
             addresses[row[0]] = row[1]
-
-        longest_email = max(imap(len, addresses))
+            longest_address = max(longest_address, len(row[0]))
 
         (data, layout) = self._bar_defaults()
         data['x'] = addresses.values()
         data['y'] = addresses.keys()
-        layout['margin']['l'] = longest_email * self.config.getfloat('font', 'size')/1.55
+        layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Top Senders'
         layout['xaxis']['title'] = 'Emails received from'
