@@ -41,7 +41,8 @@ class Import:
     """
     def __init__(self):
         config = ConfigParser.ConfigParser()
-        config.readfp(open('settings.cfg'))
+        config.readfp(open('settings.defaults.cfg'))
+        config.read(['settings.cfg'])
 
         self.email = mailbox.mbox(config.get('mail', 'mbox_file'))
         self.conn = sqlite3.connect(config.get('mail', 'db_file'))
@@ -243,7 +244,8 @@ class Graph:
     """
     def __init__(self):
         config = ConfigParser.ConfigParser()
-        config.readfp(open('settings.cfg'))
+        config.readfp(open('settings.defaults.cfg'))
+        config.read(['settings.cfg'])
 
         self.conn = sqlite3.connect(config.get('mail', 'db_file'))
 
