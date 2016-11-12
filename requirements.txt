@@ -1,0 +1,10 @@
+##############################################
+###   Dependencies for Takeout Inspector   ###
+###                                        ###
+### To install, run:                       ###
+###      $ pip install -r requirements.txt ###
+###                                        ###
+##############################################
+
+## Plotly graphing library ##
+plotly >= 1.12.9, <= 2.0
