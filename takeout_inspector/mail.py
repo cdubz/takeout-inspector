@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 """
+import ConfigParser
 import email
 import mailbox
 import plotly.offline as py
@@ -37,16 +38,16 @@ from itertools import imap
 
 class Import:
     """Parses and imports Google Takeout mbox file data in to sqlite.
-
-    Keyword arguments:
-        anonymize -- Replace email addresses with one-to-one randomized addresses in database tables.
     """
-    def __init__(self, mbox_file, db_file, anonymize=True):
-        self.email = mailbox.mbox(mbox_file)
-        self.conn = sqlite3.connect(db_file)
+    def __init__(self):
+        config = ConfigParser.ConfigParser()
+        config.readfp(open('settings.cfg'))
 
-        self.anonymize = bool(anonymize)
-        if anonymize:
+        self.email = mailbox.mbox(config.get('mail', 'mbox_file'))
+        self.conn = sqlite3.connect(config.get('mail', 'db_file'))
+
+        self.anonymize = bool(config.get('mail', 'anonymize'))
+        if self.anonymize:
             self.anonymize_key = {}
 
         self._create_tables()
@@ -240,8 +241,11 @@ class Import:
 class Graph:
     """Creates offline plotly graphs using imported data from sqlite.
     """
-    def __init__(self, db_file):
-        self.conn = sqlite3.connect(db_file)
+    def __init__(self):
+        config = ConfigParser.ConfigParser()
+        config.readfp(open('settings.cfg'))
+
+        self.conn = sqlite3.connect(config.get('mail', 'db_file'))
 
     def top_recipients(self, limit=20):
         """Creates a plotly bar graph show the top `limit` number of recipients of emails sent.
