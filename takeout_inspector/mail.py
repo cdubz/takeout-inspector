@@ -32,6 +32,7 @@ import uuid
 
 from collections import OrderedDict
 from datetime import datetime
+from itertools import imap
 
 
 class Import:
@@ -287,7 +288,35 @@ class Graph:
         for row in c.fetchall():
             addresses[row[0]] = row[1]
 
-        py.plot([go.Bar(
-            x=addresses.keys(),
-            y=addresses.values())
-        ])
+        longest_email = max(imap(len, addresses))
+
+        data = [
+            go.Bar(
+                orientation='h',
+                x=addresses.values(),
+                y=addresses.keys()
+            )
+        ]
+        layout = go.Layout(
+            margin=go.Margin(
+                b=50,
+                l=(longest_email * 6.5),
+                t=50,
+                pad=0
+            ),
+            title='Top Senders',
+            xaxis=dict(
+                title='Emails sent'
+            ),
+            yaxis=dict(
+                title='Sender address',
+                tickfont=dict(
+                    family='Lucida Console, Monaco, monospace',
+                    size=10
+                )
+            ),
+        )
+
+        py.plot(go.Figure(
+            data=data, layout=layout
+        ))
