@@ -243,14 +243,14 @@ class Graph:
     """Creates offline plotly graphs using imported data from sqlite.
     """
     def __init__(self):
-        config = ConfigParser.ConfigParser()
-        config.readfp(open('settings.defaults.cfg'))
-        config.read(['settings.cfg'])
+        self.config = ConfigParser.ConfigParser()
+        self.config.readfp(open('settings.defaults.cfg'))
+        self.config.read(['settings.cfg'])
 
-        self.conn = sqlite3.connect(config.get('mail', 'db_file'))
+        self.conn = sqlite3.connect(self.config.get('mail', 'db_file'))
 
     def top_recipients(self, limit=20):
-        """Creates a plotly bar graph show the top `limit` number of recipients of emails sent.
+        """Creates a plotly bar graph showing the top `limit` number of recipients of emails sent.
 
         Keyword arguments:
             limit -- Number of recipients to include.
@@ -269,13 +269,24 @@ class Graph:
         for row in c.fetchall():
             addresses[row[0]] = row[1]
 
-        py.plot([go.Bar(
-            x=addresses.keys(),
-            y=addresses.values())
-        ])
+        longest_email = max(imap(len, addresses))
+
+        (data, layout) = self._bar_defaults()
+        data['x'] = addresses.values()
+        data['y'] = addresses.keys()
+        layout['margin']['l'] = longest_email * self.config.getfloat('font', 'size')/1.55
+        layout['margin'] = go.Margin(**layout['margin'])
+        layout['title'] = 'Top Recipients'
+        layout['xaxis']['title'] = 'Emails sent to'
+        layout['yaxis']['title'] = 'Recipient address'
+
+        py.plot(go.Figure(
+            data=[go.Bar(**data)],
+            layout=go.Layout(**layout),
+        ))
 
     def top_senders(self, limit=20):
-        """Creates a plotly bar graph show the top `limit` number of senders of emails received.
+        """Creates a plotly bar graph showing the top `limit` number of senders of emails received.
 
         Keyword arguments:
             limit -- Number of senders to include.
@@ -296,33 +307,53 @@ class Graph:
 
         longest_email = max(imap(len, addresses))
 
-        data = [
-            go.Bar(
-                orientation='h',
-                x=addresses.values(),
-                y=addresses.keys()
-            )
-        ]
-        layout = go.Layout(
-            margin=go.Margin(
-                b=50,
-                l=(longest_email * 6.5),
-                t=50,
-                pad=0
-            ),
-            title='Top Senders',
-            xaxis=dict(
-                title='Emails sent'
-            ),
-            yaxis=dict(
-                title='Sender address',
-                tickfont=dict(
-                    family='Lucida Console, Monaco, monospace',
-                    size=10
-                )
-            ),
-        )
+        (data, layout) = self._bar_defaults()
+        data['x'] = addresses.values()
+        data['y'] = addresses.keys()
+        layout['margin']['l'] = longest_email * self.config.getfloat('font', 'size')/1.55
+        layout['margin'] = go.Margin(**layout['margin'])
+        layout['title'] = 'Top Senders'
+        layout['xaxis']['title'] = 'Emails received from'
+        layout['yaxis']['title'] = 'Sender address'
 
         py.plot(go.Figure(
-            data=data, layout=layout
+            data=[go.Bar(**data)],
+            layout=go.Layout(**layout),
         ))
+
+    def _bar_defaults(self):
+        """Prepares default data and layout options for bar graphs.
+        """
+        return (
+            dict(
+                marker=dict(
+                    color=self.config.get('color', 'primary_light'),
+                    line=dict(
+                        color=self.config.get('color', 'primary'),
+                        width=1,
+                    ),
+                ),
+                orientation='h',
+            ),
+            dict(
+                font=dict(
+                    color=self.config.get('color', 'text'),
+                    family=self.config.get('font', 'family'),
+                    size=self.config.get('font', 'size'),
+                ),
+                margin=dict(
+                    b=50,
+                    t=50,
+                ),
+                xaxis=dict(
+                    titlefont=dict(
+                        color=self.config.get('color', 'text_lighter'),
+                    )
+                ),
+                yaxis=dict(
+                    titlefont=dict(
+                        color=self.config.get('color', 'text_lighter'),
+                    ),
+                ),
+            )
+        )
