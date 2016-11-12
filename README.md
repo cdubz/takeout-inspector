@@ -1,5 +1,5 @@
 # Takeout Inspector
-Parse and import data from [Google Takeout](https://takeout.google.com/settings/takeout) files.
+Parse and inspect data from [Google Takeout](https://takeout.google.com/settings/takeout) exports.
 
 # Prerequisites
 
@@ -19,7 +19,7 @@ In order to do anything with Takeout Inspector, you will need some exported data
 1. Click **Create archive**.
 1. Wait! It will take a while for the data to arrive.
 
-Particularly large *Mail* archives may take a very long time to process. My first export of 15,000 emails took about six hours.
+Particularly large *Mail* archives may take a very long time to process.
 
 # Installation
 
