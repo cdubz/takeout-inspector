@@ -26,10 +26,10 @@ SOFTWARE.
 import ConfigParser
 import email
 import mailbox
+import names
 import plotly.offline as py
 import plotly.graph_objs as go
 import sqlite3
-import uuid
 
 from collections import OrderedDict
 from datetime import datetime
@@ -48,7 +48,8 @@ class Import:
 
         self.anonymize = bool(config.get('mail', 'anonymize'))
         if self.anonymize:
-            self.anonymize_key = {}
+            self.address_key = {}
+            self.domain_key = {}
 
         self._create_tables()
         self.query_count = 0
@@ -89,7 +90,7 @@ class Import:
 
         if self.anonymize:
             c.execute('''
-                 CREATE TABLE IF NOT EXISTS anonymize_key(
+                 CREATE TABLE IF NOT EXISTS address_key(
                   `real_address` TEXT,
                   `anon_address` TEXT,
                   `real_name` TEXT,
@@ -114,8 +115,8 @@ class Import:
                 self.query_count = 0
 
         if self.anonymize:
-            for real_address, anon_info in self.anonymize_key.iteritems():
-                c.execute('''INSERT INTO `anonymize_key` VALUES(?, ?, ?, ?);''',
+            for real_address, anon_info in self.address_key.iteritems():
+                c.execute('''INSERT INTO `address_key` VALUES(?, ?, ?, ?);''',
                           (anon_info['address'].decode('utf-8'), anon_info['anon_address'],
                            anon_info['name'].decode('utf-8'), anon_info['anon_name']))
 
@@ -172,20 +173,27 @@ class Import:
 
     def _anonymize_address(self, address, name):
         """Turns a name and address in to an anonymized [address, anon_address, name, anon_name] dict and adds it to
-        self.anonymize_key with address as the key (if it does not already exist). Returns the full dict.
+        self.address_key with address as the key (if it does not already exist). Returns the full dict.
+
+        Additionally, self.domain_key is maintained so the domain can be anonymized consistently in order to allow for
+        potential querying of the database with domain-based grouping.
 
         As a side effect, this method will only use the first name it encounters for any particular email. Not ideal,
         but also not a big deal as long as the actual unique identifer (the email) is preserved.
         """
-        if address not in self.anonymize_key:
-            anon_name = str(uuid.uuid4())
-            self.anonymize_key[address] = {
+        domain = address.split('@', 1)[1]
+        if domain not in self.domain_key:
+            self.domain_key[domain] = 'domain' + str(len(self.domain_key)) + '.tld'
+
+        if address not in self.address_key:
+            anon_name = names.get_full_name()
+            self.address_key[address] = {
                 'address': address,
-                'anon_address': anon_name + '@domain.tld',
+                'anon_address': anon_name.replace(' ', '-').lower() + '@' + self.domain_key[domain],
                 'name': name,
                 'anon_name': anon_name
             }
-        return self.anonymize_key[address]
+        return self.address_key[address]
 
     def _parse_addresses(self, addresses, unique=True):
         """Turns a list of address strings (e.g. from email.Message.get_all()) in to a list of formatted [name, address]
@@ -209,7 +217,7 @@ class Import:
                 local_part = local_part.replace('.', '').lower()  # Removes dots and normalizes case.
                 address = local_part + '@' + domain
             except ValueError:  # Throws when the address does not have an @ anywhere in the string.
-                address = address[1]
+                address = address[1] + '@domain-not-found.tld'
 
             if self.anonymize:
                 anonymized_address = self._anonymize_address(address, name)

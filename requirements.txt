@@ -6,5 +6,8 @@
 ###                                        ###
 ##############################################
 
+## Random name generator ##
+names >= 0.3.0, < 1.0
+
 ## Plotly graphing library ##
-plotly >= 1.12.9, <= 2.0
+plotly >= 1.12.9, < 2.0
