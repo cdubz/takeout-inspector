@@ -257,7 +257,7 @@ class Graph:
         self.conn = sqlite3.connect(self.config.get('mail', 'db_file'))
 
     def top_recipients(self, limit=20):
-        """Creates a plotly bar graph showing the top `limit` number of recipients of emails sent.
+        """Returns a plotly bar graph <div> showing the top `limit` number of recipients of emails sent.
 
         Keyword arguments:
             limit -- Number of recipients to include.
@@ -287,13 +287,14 @@ class Graph:
         layout['xaxis']['title'] = 'Emails sent to'
         layout['yaxis']['title'] = 'Recipient address'
 
-        py.plot(go.Figure(
-            data=[go.Bar(**data)],
-            layout=go.Layout(**layout),
-        ))
+        return py.plot(
+            go.Figure(data=[go.Bar(**data)], layout=go.Layout(**layout)),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def top_senders(self, limit=20):
-        """Creates a plotly bar graph showing the top `limit` number of senders of emails received.
+        """Returns a plotly bar graph <div> showing the top `limit` number of senders of emails received.
 
         Keyword arguments:
             limit -- Number of senders to include.
@@ -323,10 +324,11 @@ class Graph:
         layout['xaxis']['title'] = 'Emails received from'
         layout['yaxis']['title'] = 'Sender address'
 
-        py.plot(go.Figure(
-            data=[go.Bar(**data)],
-            layout=go.Layout(**layout),
-        ))
+        return py.plot(
+            go.Figure(data=[go.Bar(**data)], layout=go.Layout(**layout)),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def _bar_defaults(self):
         """Prepares default data and layout options for bar graphs.
