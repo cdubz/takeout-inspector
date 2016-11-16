@@ -256,6 +256,29 @@ class Graph:
 
         self.conn = sqlite3.connect(self.config.get('mail', 'db_file'))
 
+    def all_graphs(self, top_recipients_limit=10, top_senders_limit=10):
+        """Creates an HTML file containing all available graphs.
+
+        Keyword arguments:
+            top_recipients_limit -- Number of top recipients to graph.
+            top_senders_limit -- Number of top senders to graph.
+        """
+        with open('all_graphs_mail.html', 'w') as f:
+            f.write(''.join([
+                '<!DOCTYPE HTML>\n',
+                '<html>\n',
+                '<head>\n',
+                '\t<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />\n',
+                '\t<title>Mail - All Graphs | Takeout Inspector</title>\n',
+                '\t<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>\n',
+                '</head>\n',
+                '<body>\n',
+                self.top_recipients(top_recipients_limit) + '\n',
+                self.top_senders(top_senders_limit) + '\n',
+                '</body>\n',
+                '</html>',
+            ]))
+
     def top_recipients(self, limit=20):
         """Returns a plotly bar graph <div> showing the top `limit` number of recipients of emails sent.
 
