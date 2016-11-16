@@ -1,6 +1,7 @@
 """takeout_inspector/mail.py
 
-Defines classes and methods used to parse a Google Takeout mbox file and import data in to an sqlite database.
+Defines classes and methods used to parse a Google Takeout mbox file, import data in to an sqlite database and generate
+graphs.
 
 Copyright (c) 2016 Christopher Charbonneau Wells
 
