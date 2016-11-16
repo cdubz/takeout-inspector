@@ -278,9 +278,55 @@ class Graph:
                 self.top_senders(top_senders_limit) + '\n',
                 self.chat_vs_email() + '\n',
                 self.chat_vs_email(cumulative=True) + '\n',
+                self.chat_times() + '\n',
                 '</body>\n',
                 '</html>',
             ]))
+
+    def chat_times(self):
+        """Returns a plotly graph showing chat habits by hour of the day (UTC).
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT strftime('%H', `date`) AS `hour`, COUNT(`message_key`) AS `chat_messages`
+            FROM `messages`
+            WHERE `gmail_labels` LIKE '%Chat%'
+            GROUP BY `hour`
+            ORDER BY `hour` ASC;''')
+
+        data = OrderedDict()
+        for row in c.fetchall():
+            data[row[0]] = row[1]
+
+        total_messages = sum(data.values())
+        percentages = OrderedDict()
+        for hour in data.keys():
+            percentages[hour] = str(round(float(data[hour])/float(total_messages) * 100, 2)) + '%'
+
+        data_args = dict(
+            x=data.keys(),
+            y=data.values(),
+            text=percentages.values(),
+            name='Chat messages',
+            marker=dict(
+                color=self.config.get('color', 'primary')
+            ),
+            fill='tozeroy',
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Chat Times (UTC)'
+        layout_args['xaxis']['title'] = 'Hour of day (UTC)'
+        layout_args['yaxis']['title'] = 'Chat messages'
+
+        trace = go.Scatter(**data_args)
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def chat_vs_email(self, cumulative=False):
         """Returns a plotly graph showing chat vs. email usage over time (by year and month).
