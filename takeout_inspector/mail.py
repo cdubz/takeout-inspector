@@ -310,16 +310,24 @@ class Graph:
                 chat_data[row[0]] = row[1]
                 email_data[row[0]] = row[2]
 
-        chat_args = {
-            'x': chat_data.keys(),
-            'y': chat_data.values(),
-            'name': 'Chats',
-        }
-        email_args = {
-            'x': email_data.keys(),
-            'y': email_data.values(),
-            'name': 'Emails',
-        }
+        chat_args = dict(
+            x=chat_data.keys(),
+            y=chat_data.values(),
+            name='Chats',
+            marker=dict(
+                color=self.config.get('color', 'primary'),
+            ),
+        )
+
+        email_args = dict(
+            x=email_data.keys(),
+            y=email_data.values(),
+            name='Emails',
+            marker=dict(
+                color=self.config.get('color', 'secondary')
+            ),
+        )
+
         layout_args = self._default_layout_options()
         layout_args['title'] = 'Chat vs. Email Usage'
 
