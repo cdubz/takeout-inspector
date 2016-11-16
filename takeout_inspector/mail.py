@@ -285,6 +285,55 @@ class Graph:
                 '</html>',
             ]))
 
+    def chat_thread_sizes(self):
+        """Returns a plotly scatter/bubble graph showing the sizes (by message count) of chat thread over time.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT gmail_thread_id,
+            strftime('%Y-%m-%d', `date`) AS thread_date,
+            COUNT(message_key) as thread_size,
+            GROUP_CONCAT(DISTINCT `from`) AS participants
+            FROM messages
+            WHERE gmail_labels LIKE '%Chat%'
+            GROUP BY gmail_thread_id;''')
+
+        messages = []
+        marker_sizes = []
+        dates = []
+        descriptions = []
+        for row in c.fetchall():
+            messages.append(row[2])
+            marker_sizes.append(max(10, row[2]/5))
+            dates.append(row[1])
+            descriptions.append('Messages: ' + str(row[2]) +
+                                '<br>Date: ' + str(row[1]) +
+                                '<br>Participants:<br> - ' + str(row[3]).replace(',', '<br> - ')
+                                )
+
+        trace = go.Scatter(
+            x=dates,
+            y=messages,
+            mode='markers',
+            marker=dict(
+                size=marker_sizes,
+            ),
+            text=descriptions
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Chat Thread Sizes'
+        layout_args['hovermode'] = 'closest'
+        layout_args['xaxis']['title'] = 'Date'
+        layout_args['yaxis']['title'] = 'Messages in thread'
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
+
     def chat_times(self):
         """Returns a plotly graph showing chat habits by hour of the day (UTC).
         """
