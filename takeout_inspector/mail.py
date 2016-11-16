@@ -377,6 +377,8 @@ class Graph:
 
         layout_args = self._default_layout_options()
         layout_args['title'] = 'Chat vs. Email Usage'
+        layout_args['xaxis']['title'] = 'Year and month'
+        layout_args['yaxis']['title'] = 'Number of messages'
 
         if cumulative:
             layout_args['title'] += ' (Cumulative)'
