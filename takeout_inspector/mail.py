@@ -306,7 +306,7 @@ class Graph:
         data['y'] = addresses.keys()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
-        layout['title'] = 'Top Recipients'
+        layout['title'] = 'Top ' + str(limit) + ' Recipients'
         layout['xaxis']['title'] = 'Emails sent to'
         layout['yaxis']['title'] = 'Recipient address'
 
@@ -343,7 +343,7 @@ class Graph:
         data['y'] = addresses.keys()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
-        layout['title'] = 'Top Senders'
+        layout['title'] = 'Top ' + str(limit) + ' Senders'
         layout['xaxis']['title'] = 'Emails received from'
         layout['yaxis']['title'] = 'Sender address'
 
