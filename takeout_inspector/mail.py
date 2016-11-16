@@ -215,7 +215,9 @@ class Import:
             try:
                 [local_part, domain] = address[1].split('@', 1)
                 domain = domain.split('/', 1)[0].lower()  # Removes Resourcepart and normalizes case.
-                local_part = local_part.replace('.', '').lower()  # Removes dots and normalizes case.
+                local_part = local_part.lower()  # Normalizes to all lower case.
+                if domain in ['gmail.com']:  # Removes dots for services that disregard them.
+                    local_part = local_part.replace('.', '')
                 address = local_part + '@' + domain
             except ValueError:  # Throws when the address does not have an @ anywhere in the string.
                 address = address[1] + '@domain-not-found.tld'
