@@ -62,40 +62,40 @@ class Import:
 
         c.execute('''
             CREATE TABLE IF NOT EXISTS messages(
-              `message_key` INT PRIMARY KEY,
+              message_key INT PRIMARY KEY,
               `from` TEXT,
               `to` TEXT,
-              `subject` TEXT,
+              subject TEXT,
               `date` DATETIME,
-              `gmail_thread_id` INT,
-              `gmail_labels` TEXT
+              gmail_thread_id INT,
+              gmail_labels TEXT
              );
         ''')
         c.execute('''
              CREATE TABLE IF NOT EXISTS headers(
-              `message_key` INT,
-              `header` TEXT,
-              `value` TEXT,
-              FOREIGN KEY(`message_key`) REFERENCES messages(`message_key`)
+              message_key INT,
+              header TEXT,
+              value TEXT,
+              FOREIGN KEY(message_key) REFERENCES messages(message_key)
              );
         ''')
         c.execute('''
              CREATE TABLE IF NOT EXISTS recipients(
-              `message_key` INT,
-              `name` TEXT,
-              `address` TEXT,
-              `header` TEXT,
-              FOREIGN KEY(`message_key`) REFERENCES messages(`message_key`)
+              message_key INT,
+              name TEXT,
+              address TEXT,
+              header TEXT,
+              FOREIGN KEY(message_key) REFERENCES messages(message_key)
              );
         ''')
 
         if self.anonymize:
             c.execute('''
                  CREATE TABLE IF NOT EXISTS address_key(
-                  `real_address` TEXT,
-                  `anon_address` TEXT,
-                  `real_name` TEXT,
-                  `anon_name` TEXT
+                  real_address TEXT,
+                  anon_address TEXT,
+                  real_name TEXT,
+                  anon_name TEXT
                  );
             ''')
 
@@ -117,11 +117,11 @@ class Import:
 
         if self.anonymize:
             for real_address, anon_info in self.address_key.iteritems():
-                c.execute('''INSERT INTO `address_key` VALUES(?, ?, ?, ?);''',
+                c.execute('''INSERT INTO address_key VALUES(?, ?, ?, ?);''',
                           (anon_info['address'].decode('utf-8'), anon_info['anon_address'],
                            anon_info['name'].decode('utf-8'), anon_info['anon_name']))
 
-        c.execute('''CREATE INDEX `id_date` ON `messages` (`date` DESC)''')
+        c.execute('''CREATE INDEX id_date ON messages (`date` DESC)''')
 
         self.conn.commit()
 
@@ -131,13 +131,13 @@ class Import:
         """
         mail_all_to = message.get_all('To', [])
         for name, address in self._parse_addresses(mail_all_to):
-            c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?, ?);''',
+            c.execute('''INSERT INTO recipients VALUES(?, ?, ?, ?);''',
                       (key, name.decode('utf-8'), address.decode('utf-8'), 'To'))
             self.query_count += 1
 
         mail_all_cc = message.get_all('CC', [])
         for name, address in self._parse_addresses(mail_all_cc):
-            c.execute('''INSERT INTO `recipients` VALUES(?, ?, ?, ?);''',
+            c.execute('''INSERT INTO recipients VALUES(?, ?, ?, ?);''',
                       (key, name.decode('utf-8'), address.decode('utf-8'), 'CC'))
             self.query_count += 1
 
@@ -148,7 +148,7 @@ class Import:
         record of all headers.
         """
         for header, value in message.items():
-            c.execute('''INSERT INTO `headers` VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
+            c.execute('''INSERT INTO headers VALUES(?, ?, ?);''', (key, header, value.decode('utf-8')))
             self.query_count += 1
 
     def _insert_messages(self, c, key, message):
@@ -167,7 +167,7 @@ class Import:
         mail_gmail_id = message.get('X-GM-THRID', '')
         mail_gmail_labels = message.get('X-Gmail-Labels', '')
 
-        c.execute('''INSERT INTO `messages` VALUES(?, ?, ?, ?, ?, ?, ?);''',
+        c.execute('''INSERT INTO messages VALUES(?, ?, ?, ?, ?, ?, ?);''',
                   (key, mail_from[:-1].decode('utf-8'), mail_to[:-1].decode('utf-8'), mail_subject.decode('utf-8'),
                    mail_date_utc, mail_gmail_id, mail_gmail_labels.decode('utf-8')))
         self.query_count += 1
@@ -288,11 +288,11 @@ class Graph:
         """
         c = self.conn.cursor()
 
-        c.execute('''SELECT strftime('%H', `date`) AS `hour`, COUNT(`message_key`) AS `chat_messages`
-            FROM `messages`
-            WHERE `gmail_labels` LIKE '%Chat%'
-            GROUP BY `hour`
-            ORDER BY `hour` ASC;''')
+        c.execute('''SELECT strftime('%H', `date`) AS hour, COUNT(message_key) AS chat_messages
+            FROM messages
+            WHERE gmail_labels LIKE '%Chat%'
+            GROUP BY hour
+            ORDER BY hour ASC;''')
 
         data = OrderedDict()
         for row in c.fetchall():
@@ -336,12 +336,12 @@ class Graph:
         """
         c = self.conn.cursor()
 
-        c.execute('''SELECT strftime('%Y-%m', `date`) as `period`,
-          COUNT(CASE WHEN`gmail_labels` LIKE '%Chat%' THEN 1 ELSE NULL END) AS `chat_messages`,
-          COUNT(CASE WHEN `gmail_labels` NOT LIKE '%Chat%' THEN 1 ELSE NULL END) AS `email_messages`
-          FROM `messages`
-          GROUP BY `period`
-          ORDER BY `period` ASC;''')
+        c.execute('''SELECT strftime('%Y-%m', `date`) as period,
+          COUNT(CASE WHEN gmail_labels LIKE '%Chat%' THEN 1 ELSE NULL END) AS chat_messages,
+          COUNT(CASE WHEN gmail_labels NOT LIKE '%Chat%' THEN 1 ELSE NULL END) AS email_messages
+          FROM messages
+          GROUP BY period
+          ORDER BY period ASC;''')
 
         chat_data = OrderedDict()
         chat_total = 0
