@@ -320,9 +320,8 @@ class Graph:
             'y': email_data.values(),
             'name': 'Emails',
         }
-        layout_args = {
-            'title': 'Chat vs. Email Usage',
-        }
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Chat vs. Email Usage'
 
         if cumulative:
             layout_args['title'] += ' (Cumulative)'
@@ -361,9 +360,20 @@ class Graph:
             addresses[row[0]] = row[1]
             longest_address = max(longest_address, len(row[0]))
 
-        (data, layout) = self._bar_defaults()
-        data['x'] = addresses.values()
-        data['y'] = addresses.keys()
+        data = dict(
+            x=addresses.values(),
+            y=addresses.keys(),
+            marker=dict(
+                color=self.config.get('color', 'primary_light'),
+                line=dict(
+                    color=self.config.get('color', 'primary'),
+                    width=1,
+                ),
+            ),
+            orientation='h',
+        )
+
+        layout = self._default_layout_options()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Recipients'
@@ -398,9 +408,20 @@ class Graph:
             addresses[row[0]] = row[1]
             longest_address = max(longest_address, len(row[0]))
 
-        (data, layout) = self._bar_defaults()
-        data['x'] = addresses.values()
-        data['y'] = addresses.keys()
+        data = dict(
+            x=addresses.values(),
+            y=addresses.keys(),
+            marker=dict(
+                color=self.config.get('color', 'primary_light'),
+                line=dict(
+                    color=self.config.get('color', 'primary'),
+                    width=1,
+                ),
+            ),
+            orientation='h',
+        )
+
+        layout = self._default_layout_options()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Senders'
@@ -413,39 +434,27 @@ class Graph:
             include_plotlyjs=False,
         )
 
-    def _bar_defaults(self):
-        """Prepares default data and layout options for bar graphs.
+    def _default_layout_options(self):
+        """Prepares default layout options for all graphs.
         """
-        return (
-            dict(
-                marker=dict(
-                    color=self.config.get('color', 'primary_light'),
-                    line=dict(
-                        color=self.config.get('color', 'primary'),
-                        width=1,
-                    ),
-                ),
-                orientation='h',
+        return dict(
+            font=dict(
+                color=self.config.get('color', 'text'),
+                family=self.config.get('font', 'family'),
+                size=self.config.get('font', 'size'),
             ),
-            dict(
-                font=dict(
-                    color=self.config.get('color', 'text'),
-                    family=self.config.get('font', 'family'),
-                    size=self.config.get('font', 'size'),
+            margin=dict(
+                b=50,
+                t=50,
+            ),
+            xaxis=dict(
+                titlefont=dict(
+                    color=self.config.get('color', 'text_lighter'),
+                )
+            ),
+            yaxis=dict(
+                titlefont=dict(
+                    color=self.config.get('color', 'text_lighter'),
                 ),
-                margin=dict(
-                    b=50,
-                    t=50,
-                ),
-                xaxis=dict(
-                    titlefont=dict(
-                        color=self.config.get('color', 'text_lighter'),
-                    )
-                ),
-                yaxis=dict(
-                    titlefont=dict(
-                        color=self.config.get('color', 'text_lighter'),
-                    ),
-                ),
-            )
+            ),
         )
