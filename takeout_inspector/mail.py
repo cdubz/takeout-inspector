@@ -275,9 +275,69 @@ class Graph:
                 '<body>\n',
                 self.top_recipients(top_recipients_limit) + '\n',
                 self.top_senders(top_senders_limit) + '\n',
+                self.chat_vs_email() + '\n',
+                self.chat_vs_email(cumulative=True) + '\n',
                 '</body>\n',
                 '</html>',
             ]))
+
+    def chat_vs_email(self, cumulative=False):
+        """Returns a plotly graph showing chat vs. email usage over time (by year and month).
+
+        Keyword arguments:
+            cumulative -- Whether ot not to display cumulative data for each month.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT strftime('%Y-%m', `date`) as `period`,
+          COUNT(CASE WHEN`gmail_labels` LIKE '%Chat%' THEN 1 ELSE NULL END) AS `chat_messages`,
+          COUNT(CASE WHEN `gmail_labels` NOT LIKE '%Chat%' THEN 1 ELSE NULL END) AS `email_messages`
+          FROM `messages`
+          GROUP BY `period`
+          ORDER BY `period` ASC;''')
+
+        chat_data = OrderedDict()
+        chat_total = 0
+        email_data = OrderedDict()
+        email_total = 0
+        for row in c.fetchall():
+            chat_total += row[1]
+            email_total += row[2]
+            if cumulative:
+                chat_data[row[0]] = chat_total
+                email_data[row[0]] = email_total
+            else:
+                chat_data[row[0]] = row[1]
+                email_data[row[0]] = row[2]
+
+        chat_args = {
+            'x': chat_data.keys(),
+            'y': chat_data.values(),
+            'name': 'Chats',
+        }
+        email_args = {
+            'x': email_data.keys(),
+            'y': email_data.values(),
+            'name': 'Emails',
+        }
+        layout_args = {
+            'title': 'Chat vs. Email Usage',
+        }
+
+        if cumulative:
+            layout_args['title'] += ' (Cumulative)'
+            chat_args['fill'] = 'tonexty'
+            email_args['fill'] = 'tozeroy'
+
+        chat_trace = go.Scatter(**chat_args)
+        email_trace = go.Scatter(**email_args)
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[chat_trace, email_trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def top_recipients(self, limit=20):
         """Returns a plotly bar graph <div> showing the top `limit` number of recipients of emails sent.
