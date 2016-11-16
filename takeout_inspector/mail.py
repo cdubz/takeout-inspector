@@ -281,9 +281,62 @@ class Graph:
                 self.chat_vs_email() + '\n',
                 self.chat_vs_email(cumulative=True) + '\n',
                 self.chat_times() + '\n',
+                self.chat_durations() + '\n',
                 '</body>\n',
                 '</html>',
             ]))
+
+    def chat_durations(self):
+        """Returns a plotly pie chart showing grouped chat duration information.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT strftime('%s', MAX(`date`)) - strftime('%s', MIN(`date`)) AS duration
+            FROM messages
+            WHERE gmail_labels LIKE '%Chat%'
+            GROUP BY gmail_thread_id;''')
+
+        data = {'Unknown': 0, '<= 1 min.': 0, '1 - 10 mins.': 0,
+                '10 - 30 mins.': 0, '30 mins. - 1 hr.': 0,
+                '> 1 hr.': 0}
+        for row in c.fetchall():
+            if row[0] < 1:
+                data['Unknown'] += 1
+            elif row[0] <= 6:
+                data['<= 1 min.'] += 1
+            elif row[0] <= 600:
+                data['1 - 10 mins.'] += 1
+            elif row[0] <= 1800:
+                data['10 - 30 mins.'] += 1
+            elif row[0] <= 3600:
+                data['30 mins. - 1 hr.'] += 1
+            else:
+                data['> 1 hr.'] += 1
+
+        trace = go.Pie(
+            labels=data.keys(),
+            values=data.values(),
+            marker=dict(
+                colors=[
+                    self.config.get('color', 'primary'),
+                    self.config.get('color', 'secondary'),
+                ]
+            )
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Chat Durations'
+        layout_args['xaxis']['showgrid'] = False
+        del layout_args['xaxis']
+        del layout_args['yaxis']
+
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def chat_thread_sizes(self):
         """Returns a plotly scatter/bubble graph showing the sizes (by message count) of chat thread over time.
