@@ -47,9 +47,10 @@ class Import:
         self.email = mailbox.mbox(config.get('mail', 'mbox_file'))
         self.conn = sqlite3.connect(config.get('mail', 'db_file'))
 
+        self.address_key = {}
+
         self.anonymize = bool(config.get('mail', 'anonymize'))
         if self.anonymize:
-            self.address_key = {}
             self.domain_key = {}
 
         self._create_tables()
@@ -116,10 +117,10 @@ class Import:
                 self.query_count = 0
 
         if self.anonymize:
-            for real_address, anon_info in self.address_key.iteritems():
+            for address, address_info in self.address_key.iteritems():
                 c.execute('''INSERT INTO address_key VALUES(?, ?, ?, ?);''',
-                          (anon_info['address'].decode('utf-8'), anon_info['anon_address'],
-                           anon_info['name'].decode('utf-8'), anon_info['anon_name']))
+                          (address_info['real_address'].decode('utf-8'), address_info['address'],
+                           address_info['real_name'].decode('utf-8'), address_info['name']))
 
         c.execute('''CREATE INDEX id_date ON messages (`date` DESC)''')
 
@@ -173,28 +174,24 @@ class Import:
         self.query_count += 1
 
     def _anonymize_address(self, address, name):
-        """Turns a name and address in to an anonymized [address, anon_address, name, anon_name] dict and adds it to
-        self.address_key with address as the key (if it does not already exist). Returns the full dict.
+        """Turns a name and address in to an anonymized [address, anon_address, name, anon_name] dict and returns the
+        result.
 
         Additionally, self.domain_key is maintained so the domain can be anonymized consistently in order to allow for
         potential querying of the database with domain-based grouping.
-
-        As a side effect, this method will only use the first name it encounters for any particular email. Not ideal,
-        but also not a big deal as long as the actual unique identifer (the email) is preserved.
         """
         domain = address.split('@', 1)[1]
         if domain not in self.domain_key:
             self.domain_key[domain] = 'domain' + str(len(self.domain_key)) + '.tld'
 
-        if address not in self.address_key:
-            anon_name = names.get_full_name()
-            self.address_key[address] = {
-                'address': address,
-                'anon_address': anon_name.replace(' ', '-').lower() + '@' + self.domain_key[domain],
-                'name': name,
-                'anon_name': anon_name
-            }
-        return self.address_key[address]
+        anon_name = names.get_full_name()
+
+        return {
+            'real_address': address,
+            'address': anon_name.replace(' ', '-').lower() + '@' + self.domain_key[domain],
+            'real_name': name,
+            'name': anon_name
+        }
 
     def _parse_addresses(self, addresses, unique=True):
         """Turns a list of address strings (e.g. from email.Message.get_all()) in to a list of formatted [name, address]
@@ -202,6 +199,10 @@ class Import:
             1) Removes XMPP Resourceparts (https://xmpp.org/rfcs/rfc6122.html).
             2) Removes periods from the local part for @gmail.com addresses.
             3) Converts the full address to lower case.
+
+        Also adds address information to self.address_key with address as the key (if it does not already exist). As a
+        side effect, this method will only use the first name it encounters for any particular email. Not ideal, but
+        also not a big deal as long as the actual unique identifer (the email) is preserved.
 
         Keyword arguments:
             unique -- Produces a list of unique entries by email address.
@@ -222,12 +223,16 @@ class Import:
             except ValueError:  # Throws when the address does not have an @ anywhere in the string.
                 address = address[1] + '@domain-not-found.tld'
 
-            if self.anonymize:
-                anonymized_address = self._anonymize_address(address, name)
-                name = anonymized_address['anon_name']
-                address = anonymized_address['anon_address']
+            if address not in self.address_key:
+                if self.anonymize:
+                    self.address_key[address] = self._anonymize_address(address, name)
+                else:
+                    self.address_key[address] = {
+                        'address': address,
+                        'name': name,
+                    }
 
-            addresses[idx] = [name, address]
+            addresses[idx] = [self.address_key[address]['name'], self.address_key[address]['address']]
 
         return addresses
 
