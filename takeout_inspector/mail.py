@@ -424,15 +424,14 @@ class Graph:
         c.execute('''SELECT strftime('%s', MAX(`date`)) - strftime('%s', MIN(`date`)) AS duration
             FROM messages
             WHERE gmail_labels LIKE '%Chat%'
-            GROUP BY gmail_thread_id;''')
+            GROUP BY gmail_thread_id
+            HAVING duration > 0;''')
 
-        data = {'Unknown': 0, '<= 1 min.': 0, '1 - 10 mins.': 0,
+        data = {'<= 1 min.': 0, '1 - 10 mins.': 0,
                 '10 - 30 mins.': 0, '30 mins. - 1 hr.': 0,
                 '> 1 hr.': 0}
         for row in c.fetchall():
-            if row[0] < 1:
-                data['Unknown'] += 1
-            elif row[0] <= 6:
+            if row[0] <= 60:
                 data['<= 1 min.'] += 1
             elif row[0] <= 600:
                 data['1 - 10 mins.'] += 1
