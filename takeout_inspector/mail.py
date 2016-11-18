@@ -259,6 +259,12 @@ class Graph:
 
         self.conn = sqlite3.connect(self.config.get('mail', 'db_file'))
 
+        self.owner_email = self.config.get('mail', 'owner')
+        if self.config.get('mail', 'anonymize'):  # If data is anonymized, get the fake address for the owner.
+            c = self.conn.cursor()
+            c.execute('''SELECT anon_address FROM address_key WHERE real_address = ?;''', (self.owner_email,))
+            self.owner_email = c.fetchone()[0]
+
     def all_graphs(self, top_recipients_limit=10, top_senders_limit=10):
         """Creates an HTML file containing all available graphs.
 
