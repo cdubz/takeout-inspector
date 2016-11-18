@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 """
+import calendar
 import ConfigParser
 import email
 import mailbox
@@ -294,12 +295,68 @@ class Graph:
                 self.chat_vs_email() + '\n',
                 self.chat_vs_email(cumulative=True) + '\n',
                 self.chat_times() + '\n',
+                self.chat_days() + '\n',
                 self.chat_durations() + '\n',
                 self.chat_thread_sizes() + '\n',
                 self.chat_top_chatters() + '\n',
                 '</body>\n',
                 '</html>',
             ]))
+
+    def chat_days(self):
+        """Returns a stacked bar chart showing percentage of chats and emails on each day of the week.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT strftime('%w', `date`) AS dow,
+            COUNT(CASE WHEN gmail_labels LIKE '%Chat%' THEN 1 ELSE NULL END) AS chat_messages,
+            COUNT(CASE WHEN gmail_labels NOT LIKE '%Chat%' THEN 1 ELSE NULL END) AS email_messages
+            FROM messages
+            WHERE dow NOTNULL
+            GROUP BY dow;''')
+
+        chat_percentages = OrderedDict()
+        chat_messages = OrderedDict()
+        email_percentages = OrderedDict()
+        email_messages = OrderedDict()
+        for row in c.fetchall():
+            dow = calendar.day_name[int(row[0]) - 1]  # sqlite strftime() uses 0 = SUNDAY.
+            chat_percentages[dow] = str(round(float(row[1]) / sum([row[1], row[2]]) * 100, 2)) + '%'
+            email_percentages[dow] = str(round(float(row[2]) / sum([row[1], row[2]]) * 100, 2)) + '%'
+            chat_messages[dow] = row[1]
+            email_messages[dow] = row[2]
+
+        chats_trace = go.Bar(
+            x=chat_messages.keys(),
+            y=chat_messages.values(),
+            text=chat_percentages.values(),
+            name='Chat messages',
+            marker=dict(
+                color=self.config.get('color', 'primary'),
+            ),
+        )
+        emails_trace = go.Bar(
+            x=email_messages.keys(),
+            y=email_messages.values(),
+            text=email_percentages.values(),
+            name='Email messages',
+            marker=dict(
+                color=self.config.get('color', 'secondary'),
+            ),
+        )
+
+        layout = self._default_layout_options()
+        layout['barmode'] = 'stack'
+        layout['margin'] = go.Margin(**layout['margin'])
+        layout['title'] = 'Chat (vs. Email) Days'
+        layout['xaxis']['title'] = 'Day of the week'
+        layout['yaxis']['title'] = 'Messages exchanged'
+
+        return py.plot(
+            go.Figure(data=[chats_trace, emails_trace], layout=go.Layout(**layout)),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def chat_durations(self):
         """Returns a plotly pie chart showing grouped chat duration information.
