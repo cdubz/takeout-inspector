@@ -506,6 +506,8 @@ class Graph:
         layout_args = self._default_layout_options()
         layout_args['title'] = 'Chat Thread Sizes'
         layout_args['hovermode'] = 'closest'
+        layout_args['height'] = 800
+        layout_args['margin'] = go.Margin(**layout_args['margin'])
         layout_args['xaxis']['title'] = 'Date'
         layout_args['yaxis']['title'] = 'Messages in thread'
         layout = go.Layout(**layout_args)
