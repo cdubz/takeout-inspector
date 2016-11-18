@@ -294,6 +294,7 @@ class Graph:
                 '<h1 style="text-align: center;">Chat Statistics</h1>\n',
                 self.chat_vs_email() + '\n',
                 self.chat_vs_email(cumulative=True) + '\n',
+                self.chat_clients() + '\n',
                 self.chat_times() + '\n',
                 self.chat_days() + '\n',
                 self.chat_durations() + '\n',
@@ -302,6 +303,63 @@ class Graph:
                 '</body>\n',
                 '</html>',
             ]))
+
+    def chat_clients(self):
+        """Returns a pie chart showing distribution of services/client used (based on known resourceparts). This likely
+        not particularly accurate!
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT value FROM headers WHERE header = 'To' AND value NOT LIKE '%,%';''')
+
+        clients = {'android': 0, 'Adium': 0, 'BlackBerry': 0, 'Festoon': 0, 'fire': 0,
+                    'Gush': 0, 'Gaim': 0, 'gmail': 0, 'Meebo': 0, 'Miranda': 0,
+                    'Psi': 0, 'iChat': 0, 'iGoogle': 0, 'IM+': 0, 'Talk': 0,
+                    'Trillian': 0, 'Unknown': 0
+                   }
+        for row in c.fetchall():
+            try:
+                domain = row[0].split('@', 1)[1]
+                resource_part = domain.split('/', 1)[1]
+            except IndexError:  # Throws when the address does not have an @ or a / in the string.
+                continue
+
+            unknown = True
+            for client in clients:
+                if client in resource_part:
+                    clients[client] += 1
+                    unknown = False
+
+            if unknown:
+                clients['Unknown'] += 1
+
+        for client in clients.keys():
+            if clients[client] is 0:
+                del clients[client]
+
+        trace = go.Pie(
+            labels=clients.keys(),
+            values=clients.values(),
+            marker=dict(
+                colors=[
+                    self.config.get('color', 'primary'),
+                    self.config.get('color', 'secondary'),
+                ]
+            )
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Chat Clients'
+        del layout_args['xaxis']
+        del layout_args['yaxis']
+
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
 
     def chat_days(self):
         """Returns a stacked bar chart showing percentage of chats and emails on each day of the week.
@@ -398,7 +456,6 @@ class Graph:
 
         layout_args = self._default_layout_options()
         layout_args['title'] = 'Chat Durations'
-        layout_args['xaxis']['showgrid'] = False
         del layout_args['xaxis']
         del layout_args['yaxis']
 
