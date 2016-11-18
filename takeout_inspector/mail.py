@@ -49,7 +49,7 @@ class Import:
 
         self.address_key = {}
 
-        self.anonymize = bool(config.get('mail', 'anonymize'))
+        self.anonymize = config.getboolean('mail', 'anonymize')
         if self.anonymize:
             self.domain_key = {}
 
