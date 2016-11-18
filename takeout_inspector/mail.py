@@ -265,7 +265,7 @@ class Graph:
         self.conn = sqlite3.connect(self.config.get('mail', 'db_file'))
 
         self.owner_email = self.config.get('mail', 'owner')
-        if self.config.get('mail', 'anonymize'):  # If data is anonymized, get the fake address for the owner.
+        if self.config.getboolean('mail', 'anonymize'):  # If data is anonymized, get the fake address for the owner.
             c = self.conn.cursor()
             c.execute('''SELECT anon_address FROM address_key WHERE real_address = ?;''', (self.owner_email,))
             self.owner_email = c.fetchone()[0]
@@ -296,6 +296,7 @@ class Graph:
                 self.chat_times() + '\n',
                 self.chat_durations() + '\n',
                 self.chat_thread_sizes() + '\n',
+                self.chat_top_chatters() + '\n',
                 '</body>\n',
                 '</html>',
             ]))
@@ -442,6 +443,63 @@ class Graph:
 
         return py.plot(
             go.Figure(data=[trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
+
+    def chat_top_chatters(self, limit=10):
+        """Returns a plotly bar graph showing top chat senders with an email comparison.
+
+        Keyword arguments:
+            limit -- How many chat senders to return.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT `from`,
+            COUNT(CASE WHEN gmail_labels LIKE '%Chat%' THEN 1 ELSE NULL END) AS chat_messages,
+            COUNT(CASE WHEN gmail_labels NOT LIKE '%Chat%' THEN 1 ELSE NULL END) AS email_messages
+            FROM messages
+            WHERE `from` NOT LIKE ?
+            GROUP BY `from`
+            ORDER BY chat_messages DESC
+            LIMIT ?;''', ('%' + self.owner_email + '%', limit,))
+
+        chats = OrderedDict()
+        emails = OrderedDict()
+        longest_address = 0
+        for row in c.fetchall():
+            chats[row[0]] = row[1]
+            emails[row[0]] = row[2]
+            longest_address = max(longest_address, len(row[0]))
+
+        chats_trace = go.Bar(
+            x=chats.keys(),
+            y=chats.values(),
+            name='Chat messages',
+            marker=dict(
+                color=self.config.get('color', 'primary'),
+            ),
+        )
+        emails_trace = go.Bar(
+            x=emails.keys(),
+            y=emails.values(),
+            name='Email messages',
+            marker=dict(
+                color=self.config.get('color', 'secondary'),
+            ),
+        )
+
+        layout = self._default_layout_options()
+        layout['barmode'] = 'grouped'
+        layout['height'] = longest_address * 15
+        layout['margin']['b'] = longest_address * self.config.getfloat('font', 'size') / 2
+        layout['margin'] = go.Margin(**layout['margin'])
+        layout['title'] = 'Top ' + str(limit) + ' Chatters'
+        layout['xaxis']['title'] = 'Sender address'
+        layout['yaxis']['title'] = 'Messages received from'
+
+        return py.plot(
+            go.Figure(data=[chats_trace, emails_trace], layout=go.Layout(**layout)),
             output_type='div',
             include_plotlyjs=False,
         )
