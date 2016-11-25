@@ -272,39 +272,49 @@ class Graph:
             self.owner_email = c.fetchone()[0]
 
     def all_graphs(self):
-        """Creates an HTML file containing all available Mail graphs.
-        """
-        divs = {}
-        javascript = {}
-        reports = ['chat_clients', 'chat_days', 'chat_durations', 'chat_thread_sizes', 'chat_times',
-                   'chat_top_chatters', 'chat_vs_email', 'chat_vs_email_cumulative', 'top_recipients', 'top_senders']
-        for report in reports:
-            output = getattr(self, report)()
-            divs[report], javascript[report] = output.split('<script type="text/javascript">')
-            javascript[report] = javascript[report][:-9]  # Removes </script> from the end of the string.
+        """Creates a page containing all available Mail graphs. The HTML file (mail.html) and supporting JavaScript file
+        (mail.js) are both saved to the local directory. The page relies on two JavaScript libraries which are included
+        in the `resources/js` directory of Takeout Inspector:
+          - Plotly: https://plot.ly/javascript/
+          - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
 
-        with open('mail.html', 'w') as f:
-            f.write(''.join([
+        TODO: Refactor Google Talk graphs in to a separate class as "Talk" graphs.
+        """
+        reports = ['chat_clients', 'chat_days', 'chat_durations', 'chat_thread_sizes', 'chat_times',
+                   'chat_top_chatters', 'chat_vs_email', 'chat_vs_email_cumulative', 'top_recipients',
+                   'top_senders']
+
+        with open('mail.html', 'w') as html, open('mail.js', 'w') as js:
+            html.write(''.join([
                 '<!DOCTYPE HTML>\n',
                 '<html>\n',
                 '<head>\n',
                 '\t<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />\n',
-                '\t<title>Mail - All Graphs | Takeout Inspector</title>\n',
-                '\t<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>\n',
+                '\t<title>Mail | Takeout Inspector</title>\n',
                 '</head>\n',
-                '<body style="max-width: 800px; margin: 0 auto;">\n',
-                '<h1 style="text-align: center;">Mail Statistics</h1>\n',
-                divs['top_recipients'] + '\n',
-                divs['top_senders'] + '\n',
-                '<h1 style="text-align: center;">Talk Statistics</h1>\n',
-                divs['chat_vs_email'] + '\n',
-                divs['chat_vs_email_cumulative'] + '\n',
-                divs['chat_clients'] + '\n',
-                divs['chat_times'] + '\n',
-                divs['chat_days'] + '\n',
-                divs['chat_durations'] + '\n',
-                divs['chat_thread_sizes'] + '\n',
-                divs['chat_top_chatters'] + '\n',
+                '<body style="max-width: 800px; margin: 0 auto;">\n'
+            ]))
+
+            for report in reports:
+                output = getattr(self, report)()
+                div, javascript = output.split('<script type="text/javascript">')
+                html.write(div + '\n')
+
+                js.write(''.join([
+                    'new Waypoint({\n',
+                    "\telement: document.getElementById('" + div[9:45] + "'),\n",  # String location of div's ID.
+                    '\thandler: function() {\n',
+                    '\t\t' + javascript[:-9] + ';\n',  # Removes </script> from the end of the string.
+                    '\t\tthis.destroy();\n',
+                    '\t},\n',
+                    "\toffset: '100%'\n"
+                    '});\n\n'
+                ]))
+
+            html.write(''.join([
+                '<script src="resources/js/plotly-v1.20.5.min.js"></script>\n',
+                '<script src="resources/js/waypoints-v4.0.1.min.js"></script>\n',
+                '<script src="mail.js"></script>\n',
                 '</body>\n',
                 '</html>',
             ]))
