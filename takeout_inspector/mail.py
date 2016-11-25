@@ -271,14 +271,19 @@ class Graph:
             c.execute('''SELECT anon_address FROM address_key WHERE real_address = ?;''', (self.owner_email,))
             self.owner_email = c.fetchone()[0]
 
-    def all_graphs(self, top_recipients_limit=10, top_senders_limit=10):
-        """Creates an HTML file containing all available graphs.
-
-        Keyword arguments:
-            top_recipients_limit -- Number of top recipients to graph.
-            top_senders_limit -- Number of top senders to graph.
+    def all_graphs(self):
+        """Creates an HTML file containing all available Mail graphs.
         """
-        with open('all_graphs_mail.html', 'w') as f:
+        divs = {}
+        javascript = {}
+        reports = ['chat_clients', 'chat_days', 'chat_durations', 'chat_thread_sizes', 'chat_times',
+                   'chat_top_chatters', 'chat_vs_email', 'chat_vs_email_cumulative', 'top_recipients', 'top_senders']
+        for report in reports:
+            output = getattr(self, report)()
+            divs[report], javascript[report] = output.split('<script type="text/javascript">')
+            javascript[report] = javascript[report][:-9]  # Removes </script> from the end of the string.
+
+        with open('mail.html', 'w') as f:
             f.write(''.join([
                 '<!DOCTYPE HTML>\n',
                 '<html>\n',
@@ -288,18 +293,18 @@ class Graph:
                 '\t<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>\n',
                 '</head>\n',
                 '<body style="max-width: 800px; margin: 0 auto;">\n',
-                '<h1 style="text-align: center;">Top 10 Lists</h1>\n',
-                self.top_recipients(top_recipients_limit) + '\n',
-                self.top_senders(top_senders_limit) + '\n',
-                '<h1 style="text-align: center;">Chat Statistics</h1>\n',
-                self.chat_vs_email() + '\n',
-                self.chat_vs_email(cumulative=True) + '\n',
-                self.chat_clients() + '\n',
-                self.chat_times() + '\n',
-                self.chat_days() + '\n',
-                self.chat_durations() + '\n',
-                self.chat_thread_sizes() + '\n',
-                self.chat_top_chatters() + '\n',
+                '<h1 style="text-align: center;">Mail Statistics</h1>\n',
+                divs['top_recipients'] + '\n',
+                divs['top_senders'] + '\n',
+                '<h1 style="text-align: center;">Talk Statistics</h1>\n',
+                divs['chat_vs_email'] + '\n',
+                divs['chat_vs_email_cumulative'] + '\n',
+                divs['chat_clients'] + '\n',
+                divs['chat_times'] + '\n',
+                divs['chat_days'] + '\n',
+                divs['chat_durations'] + '\n',
+                divs['chat_thread_sizes'] + '\n',
+                divs['chat_top_chatters'] + '\n',
                 '</body>\n',
                 '</html>',
             ]))
@@ -686,7 +691,12 @@ class Graph:
             include_plotlyjs=False,
         )
 
-    def top_recipients(self, limit=20):
+    def chat_vs_email_cumulative(self):
+        """Returns the results of the chat_vs_email method with the cumulative argument set to True.
+        """
+        return self.chat_vs_email(cumulative=True)
+
+    def top_recipients(self, limit=10):
         """Returns a plotly bar graph <div> showing the top `limit` number of recipients of emails sent.
 
         Keyword arguments:
@@ -734,7 +744,7 @@ class Graph:
             include_plotlyjs=False,
         )
 
-    def top_senders(self, limit=20):
+    def top_senders(self, limit=10):
         """Returns a plotly bar graph <div> showing the top `limit` number of senders of emails received.
 
         Keyword arguments:
