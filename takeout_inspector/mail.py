@@ -331,19 +331,20 @@ class Graph:
           ORDER BY dow ASC;''', ('%' + self.owner_email + '%', '%' + self.owner_email + '%'))
 
         sent = OrderedDict()
-        sent_total = 0
+        sent_text = OrderedDict()
         received = OrderedDict()
-        received_total = 0
+        received_text = OrderedDict()
         for row in c.fetchall():
             dow = calendar.day_name[int(row[0]) - 1]  # sqlite strftime() uses 0 = SUNDAY.
-            sent_total += row[1]
-            received_total += row[2]
             sent[dow] = row[1]
             received[dow] = row[2]
+            sent_text[dow] = str(round(float(sent[dow]) / float(sent[dow] + received[dow]) * 100, 2)) + '%'
+            received_text[dow] = str(round(float(received[dow]) / float(sent[dow] + received[dow]) * 100, 2)) + '%'
 
         sent_args = dict(
             x=sent.keys(),
             y=sent.values(),
+            text=sent_text.values(),
             name='Emails sent',
             marker=dict(
                 color=self.config.get('color', 'primary'),
@@ -353,6 +354,7 @@ class Graph:
         received_args = dict(
             x=received.keys(),
             y=received.values(),
+            text=received_text.values(),
             name='Emails received',
             marker=dict(
                 color=self.config.get('color', 'secondary')
@@ -360,12 +362,13 @@ class Graph:
         )
 
         layout_args = self._default_layout_options()
+        layout_args['barmode'] = 'stack'
         layout_args['title'] = 'Activity by Day of the Week'
         layout_args['xaxis']['title'] = 'Day of the week'
         layout_args['yaxis']['title'] = 'Number of emails'
 
-        sent_trace = go.Scatter(**sent_args)
-        received_trace = go.Scatter(**received_args)
+        sent_trace = go.Bar(**sent_args)
+        received_trace = go.Bar(**received_args)
         layout = go.Layout(**layout_args)
 
         return py.plot(
