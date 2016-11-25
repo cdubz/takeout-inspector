@@ -278,7 +278,7 @@ class Graph:
           - Plotly: https://plot.ly/javascript/
           - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
         """
-        reports = ['day_of_week', 'time_of_day', 'top_recipients', 'top_senders']
+        reports = ['day_of_week', 'thread_durations', 'time_of_day', 'top_recipients', 'top_senders']
 
         with open('mail.html', 'w') as html, open('mail.js', 'w') as js:
             html.write(''.join([
@@ -369,6 +369,61 @@ class Graph:
 
         return py.plot(
             go.Figure(data=[sent_trace, received_trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
+
+    def thread_durations(self):
+        """Returns a pie chart showing grouped thread duration information. In this case, a "thread" must consist of
+        more than one email.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT strftime('%s', MAX(`date`)) - strftime('%s', MIN(`date`)) AS duration,
+            COUNT(message_key) AS message_count
+            FROM messages
+            WHERE gmail_labels NOT LIKE '%Chat%'
+            GROUP BY gmail_thread_id
+            HAVING message_count > 1;''')
+
+        data = {'<= 10 min.': 0, '10 mins - 1 hr.': 0, '1 - 10 hrs.': 0,
+                '10 - 24 hrs.': 0, '1 - 7 days': 0, '1 - 2 weeks': 0, 'more than 2 weeks': 0}
+        for row in c.fetchall():
+            if row[0] <= 600:
+                data['<= 10 min.'] += 1
+            elif row[0] <= 3600:
+                data['10 mins - 1 hr.'] += 1
+            elif row[0] <= 36000:
+                data['1 - 10 hrs.'] += 1
+            elif row[0] <= 86400:
+                data['10 - 24 hrs.'] += 1
+            elif row[0] <= 604800:
+                data['1 - 7 days'] += 1
+            elif row[0] <= 1209600:
+                data['1 - 2 weeks'] += 1
+            else:
+                data['more than 2 weeks'] += 1
+
+        trace = go.Pie(
+            labels=data.keys(),
+            values=data.values(),
+            marker=dict(
+                colors=[
+                    self.config.get('color', 'primary'),
+                    self.config.get('color', 'secondary'),
+                ]
+            )
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Thread Durations'
+        del layout_args['xaxis']
+        del layout_args['yaxis']
+
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[trace], layout=layout),
             output_type='div',
             include_plotlyjs=False,
         )
