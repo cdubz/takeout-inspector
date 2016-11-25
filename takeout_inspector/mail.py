@@ -278,7 +278,7 @@ class Graph:
           - Plotly: https://plot.ly/javascript/
           - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
         """
-        reports = ['day_of_week', 'thread_durations', 'thread_sizes',
+        reports = ['day_of_week', 'label_usage', 'thread_durations', 'thread_sizes',
                    'time_of_day', 'top_recipients', 'top_senders']
 
         with open('mail.html', 'w') as html, open('mail.js', 'w') as js:
@@ -373,6 +373,45 @@ class Graph:
 
         return py.plot(
             go.Figure(data=[sent_trace, received_trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
+
+    def label_usage(self):
+        """Returns a pie chart showing usage information for labels.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT gmail_labels FROM messages
+            WHERE gmail_labels != '' AND gmail_labels NOT LIKE '%Chat%';''')
+
+        counts = {}
+        for row in c.fetchall():
+            for label in row[0].split(','):
+                if label not in counts:
+                    counts[label] = 0
+                counts[label] += 1
+
+        trace = go.Pie(
+            labels=counts.keys(),
+            values=counts.values(),
+            marker=dict(
+                colors=[
+                    self.config.get('color', 'primary'),
+                    self.config.get('color', 'secondary'),
+                ]
+            )
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Label Usage'
+        del layout_args['xaxis']
+        del layout_args['yaxis']
+
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[trace], layout=layout),
             output_type='div',
             include_plotlyjs=False,
         )
