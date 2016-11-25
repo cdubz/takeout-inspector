@@ -278,7 +278,8 @@ class Graph:
           - Plotly: https://plot.ly/javascript/
           - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
         """
-        reports = ['day_of_week', 'thread_durations', 'time_of_day', 'top_recipients', 'top_senders']
+        reports = ['day_of_week', 'thread_durations', 'thread_sizes',
+                   'time_of_day', 'top_recipients', 'top_senders']
 
         with open('mail.html', 'w') as html, open('mail.js', 'w') as js:
             html.write(''.join([
@@ -374,8 +375,8 @@ class Graph:
         )
 
     def thread_durations(self):
-        """Returns a pie chart showing grouped thread duration information. In this case, a "thread" must consist of
-        more than one email.
+        """Returns a pie chart showing grouped thread duration information. A "thread" must consist of more than one
+        email.
         """
         c = self.conn.cursor()
 
@@ -424,6 +425,45 @@ class Graph:
 
         return py.plot(
             go.Figure(data=[trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
+
+    def thread_sizes(self):
+        """Returns a graph showing thread size information. A "thread" must consist of more than one email.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT COUNT(message_key) AS message_count
+            FROM messages
+            WHERE gmail_labels NOT LIKE '%Chat%'
+            GROUP BY gmail_thread_id
+            HAVING message_count > 1;''')
+
+        counts = {}
+        for row in c.fetchall():
+            if row[0] not in counts:
+                counts[row[0]] = 0
+            counts[row[0]] += 1
+
+        data = dict(
+            x=counts.keys(),
+            y=counts.values(),
+            name='Emails in thread',
+            mode='lines+markers',
+            marker=dict(
+                color=self.config.get('color', 'primary'),
+            ),
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Thread Sizes'
+        layout_args['xaxis']['title'] = 'Number of messages'
+        layout_args['yaxis']['title'] = 'Number of threads'
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[go.Scatter(**data)], layout=layout),
             output_type='div',
             include_plotlyjs=False,
         )
