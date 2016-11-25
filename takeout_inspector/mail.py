@@ -277,7 +277,7 @@ class Graph:
           - Plotly: https://plot.ly/javascript/
           - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
         """
-        reports = ['top_recipients', 'top_senders']
+        reports = ['top_recipients', 'top_senders', 'time_of_day']
 
         with open('mail.html', 'w') as html, open('mail.js', 'w') as js:
             html.write(''.join([
@@ -315,8 +315,64 @@ class Graph:
                 '</html>',
             ]))
 
+    def time_of_day(self):
+        """Returns a graph showing email activity (sent/received) by time of day.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT strftime('%H', `date`) AS hour,
+          COUNT(CASE WHEN `from` LIKE ? THEN 1 ELSE NULL END) AS emails_sent,
+          COUNT(CASE WHEN `from` NOT LIKE ? THEN 1 ELSE NULL END) AS emails_received
+          FROM messages
+          WHERE gmail_labels LIKE '%Chat%'
+          GROUP BY hour
+          ORDER BY hour ASC;''', ('%' + self.owner_email + '%', '%' + self.owner_email + '%'))
+
+        sent = OrderedDict()
+        sent_total = 0
+        received = OrderedDict()
+        received_total = 0
+        for row in c.fetchall():
+            sent_total += row[1]
+            received_total += row[2]
+            sent[row[0]] = row[1]
+            received[row[0]] = row[2]
+
+        sent_args = dict(
+            x=sent.keys(),
+            y=sent.values(),
+            name='Emails sent',
+            marker=dict(
+                color=self.config.get('color', 'primary'),
+            ),
+        )
+
+        received_args = dict(
+            x=received.keys(),
+            y=received.values(),
+            name='Emails received',
+            marker=dict(
+                color=self.config.get('color', 'secondary')
+            ),
+        )
+
+        layout_args = self._default_layout_options()
+        layout_args['title'] = 'Activity by Hour of the Day (UTC)'
+        layout_args['xaxis']['title'] = 'Hour of the day (UTC)'
+        layout_args['yaxis']['title'] = 'Number of emails'
+
+        sent_trace = go.Scatter(**sent_args)
+        received_trace = go.Scatter(**received_args)
+        layout = go.Layout(**layout_args)
+
+        return py.plot(
+            go.Figure(data=[sent_trace, received_trace], layout=layout),
+            output_type='div',
+            include_plotlyjs=False,
+        )
+
     def top_recipients(self, limit=10):
-        """Returns a plotly bar graph <div> showing the top `limit` number of recipients of emails sent.
+        """Returns a bar graph showing the top `limit` number of recipients of emails sent.
 
         Keyword arguments:
             limit -- Number of recipients to include.
@@ -364,7 +420,7 @@ class Graph:
         )
 
     def top_senders(self, limit=10):
-        """Returns a plotly bar graph <div> showing the top `limit` number of senders of emails received.
+        """Returns a bar graph showing the top `limit` number of senders of emails received.
 
         Keyword arguments:
             limit -- Number of senders to include.
