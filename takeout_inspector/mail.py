@@ -33,6 +33,7 @@ import plotly.offline as py
 import plotly.graph_objs as go
 import re
 import sqlite3
+import wordcloud as wc
 
 from collections import OrderedDict
 from datetime import datetime
@@ -533,16 +534,27 @@ class Graph:
             for prefix in ['Re:', 'Fwd:']:
                 subject = subject.replace(prefix, '')
 
-            subject = re.sub('[^a-zA-Z ]', '', subject).strip().lower()
+            subject = re.sub('[^a-zA-Z. ]', '', subject).strip().lower()  # Limits to alpha characters, dots and spaces.
 
             for word in subject.split(' '):
                 if word:
+                    word = word.rstrip('.')  # Remove periods from the end of words (sentences) only.
                     if word not in words:
                         words[word] = 0
                     words[word] += 1
 
+        common_words = []
         for word in sorted(words, key=words.get, reverse=True):
-            print word, words[word]
+            if words[word] >= 100:
+                common_words.append([word, words[word]])
+
+        cloud = wc.WordCloud(
+            height=600,
+            max_words=1000,
+            width=600,
+        )
+        cloud.generate_from_frequencies(common_words)
+        cloud.to_image('subject_word_cloud.png')
 
     def thread_durations(self):
         """Returns a pie chart showing grouped thread duration information. A "thread" must consist of more than one
