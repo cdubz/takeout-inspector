@@ -377,6 +377,89 @@ class Graph:
             include_plotlyjs=False,
         )
 
+#    def label_network(self):
+#        """Returns a network graph of non-default labels.
+#
+#        Add `import igraph as ig` at top to re-enable.
+#        """
+#        c = self.conn.cursor()
+#
+#        c.execute('''SELECT message_key, gmail_labels FROM messages
+#                    WHERE gmail_labels != '' AND gmail_labels NOT LIKE '%Chat%';''')
+#
+#        default_labels = ['Important', 'Inbox', 'Sent', 'Spam', 'Starred', 'Trash', 'Unread']
+#
+#        g = ig.Graph()
+#        vid = 0
+#        gmail_labels = {}
+#        for row in c.fetchall():
+#            for label in row[1].split(','):
+#                if label in default_labels:
+#                    continue
+#                elif label not in gmail_labels:
+#                    g.add_vertex(label=label)
+#                    gmail_labels[label] = vid
+#                    vid += 1
+#
+#                if message_vid is None:
+#                    g.add_vertex(label='Message ' + str(row[0]))
+#                    message_vid = vid
+#                    vid += 1
+#
+#                g.add_edge(gmail_labels[label], message_vid)
+#
+#            message_vid = None
+#
+#        labels = list(g.vs['label'])
+#        N = len(labels)
+#        E = [e.tuple for e in g.es]
+#        layt = g.layout('fr')
+#
+#        Xn = [layt[k][0] for k in range(N)]
+#        Yn = [layt[k][1] for k in range(N)]
+#        Xe = []
+#        Ye = []
+#        for e in E:
+#            Xe += [layt[e[0]][0], layt[e[1]][0], None]
+#            Ye += [layt[e[0]][1], layt[e[1]][1], None]
+#
+#        trace1 = go.Scatter(
+#            x=Xe,
+#            y=Ye,
+#            mode='lines',
+#            line=go.Line(color='rgb(210,210,210)', width=1),
+#            hoverinfo='none'
+#        )
+#        trace2 = go.Scatter(
+#            x=Xn,
+#            y=Yn,
+#            mode='markers',
+#            marker=go.Marker(
+#                symbol='dot',
+#                size=5,
+#                color='#6959CD',
+#                line=go.Line(color=self.config.get('color', 'primary'), width=0.5)
+#            ),
+#            text=labels,
+#            hoverinfo='text'
+#        )
+#        data = go.Data([trace1, trace2])
+#
+#        hide_axis = dict(showline=False, zeroline=False, showgrid=False, showticklabels=False, title='')
+#        layout_args = self._default_layout_options()
+#        layout_args['title'] = 'Labels Network Graph'
+#        layout_args['hovermode'] = 'closest'
+#        layout_args['showlegend'] = False
+#        layout_args['xaxis'] = go.XAxis(hide_axis)
+#        layout_args['yaxis'] = go.YAxis(hide_axis)
+#        layout = go.Layout(**layout_args)
+#
+#        return py.plot(
+#            go.Figure(data=data, layout=layout),
+#            output_type='div',
+#            include_plotlyjs=False,
+#        )
+
     def label_usage(self):
         """Returns a pie chart showing usage information for labels.
         """
