@@ -121,7 +121,7 @@ class Import:
             for address, address_info in self.address_key.iteritems():
                 c.execute('''INSERT INTO address_key VALUES(?, ?, ?, ?);''',
                           (address_info['real_address'].decode('utf-8'), address_info['address'],
-                           address_info['real_name'].decode('utf-8'), address_info['name']))
+                           self._decode_header(address_info['real_name']), address_info['name']))
 
         c.execute('''CREATE INDEX id_date ON messages (`date` DESC)''')
 
@@ -134,13 +134,13 @@ class Import:
         mail_all_to = message.get_all('To', [])
         for name, address in self._parse_addresses(mail_all_to):
             c.execute('''INSERT INTO recipients VALUES(?, ?, ?, ?);''',
-                      (key, name.decode('utf-8'), address.decode('utf-8'), 'To'))
+                      (key, self._decode_header(name), address.decode('utf-8'), 'To'))
             self.query_count += 1
 
         mail_all_cc = message.get_all('CC', [])
         for name, address in self._parse_addresses(mail_all_cc):
             c.execute('''INSERT INTO recipients VALUES(?, ?, ?, ?);''',
-                      (key, name.decode('utf-8'), address.decode('utf-8'), 'CC'))
+                      (key, self._decode_header(name), address.decode('utf-8'), 'CC'))
             self.query_count += 1
 
     def _insert_headers(self, c, key, message):
@@ -159,20 +159,39 @@ class Import:
         mail_from = ''
         for idx, address in enumerate(self._parse_addresses(message.get_all('From', []))):
             mail_from += email.utils.formataddr(address) + ','  # Final ',' is removed at INSERT below.
+        mail_from = self._decode_header(mail_from)
 
         mail_to = ''
         for idx, address in enumerate(self._parse_addresses(message.get_all('To', []))):
             mail_to += email.utils.formataddr(address) + ','  # Final ',' is removed at INSERT below.
+        mail_to = self._decode_header(mail_to)
 
-        mail_subject = message.get('Subject', '')
+        mail_subject = self._decode_header(message.get('Subject', ''))
         mail_date_utc = self._get_message_date(message)
         mail_gmail_id = message.get('X-GM-THRID', '')
-        mail_gmail_labels = message.get('X-Gmail-Labels', '')
+        mail_gmail_labels = self._decode_header(message.get('X-Gmail-Labels', ''))
 
         c.execute('''INSERT INTO messages VALUES(?, ?, ?, ?, ?, ?, ?);''',
-                  (key, mail_from[:-1].decode('utf-8'), mail_to[:-1].decode('utf-8'), mail_subject.decode('utf-8'),
-                   mail_date_utc, mail_gmail_id, mail_gmail_labels.decode('utf-8')))
+                  (key, mail_from[:-1], mail_to[:-1], mail_subject, mail_date_utc, mail_gmail_id, mail_gmail_labels))
         self.query_count += 1
+
+    def _decode_header(self, header):
+        """Attempts to clean up a header:
+            1. Removes newline and tab characters.
+            2. Attempts to resole bad formatting.
+            3. Decodes the header (if the header starts with "=?", for example).
+            4. Recombines the decoded header in to a single unicode string.
+
+        Badly formatted characters are ignored.
+
+        TODO: Put email.header.decode_header() in a try and do something when it raises exceptions.
+        """
+        if header:
+            header = ' '.join(header.split())  # Gets rid of newline and tab characters.
+            header = header.replace('?==?', '?= =?')  # Encoded words must be separated by a space.
+            header = email.header.decode_header(header)  # Handles UTF-8 and other encoded types.
+            header = ' '.join([unicode(t[0], t[1] or 'utf-8', 'ignore') for t in header])  # Recombines all pieces.
+        return header
 
     def _anonymize_address(self, address, name):
         """Turns a name and address in to an anonymized [address, anon_address, name, anon_name] dict and returns the
