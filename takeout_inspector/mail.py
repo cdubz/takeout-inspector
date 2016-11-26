@@ -31,6 +31,7 @@ import mailbox
 import names
 import plotly.offline as py
 import plotly.graph_objs as go
+import re
 import sqlite3
 
 from collections import OrderedDict
@@ -517,6 +518,31 @@ class Graph:
             output_type='div',
             include_plotlyjs=False,
         )
+
+    def subject_word_cloud(self):
+        """Returns word cloud of words used in email subjects.
+        """
+        c = self.conn.cursor()
+
+        c.execute('''SELECT subject FROM messages
+            WHERE gmail_labels NOT LIKE '%Chat%' AND subject != '';''')
+
+        words = {}
+        for row in c.fetchall():
+            subject = row[0]
+            for prefix in ['Re:', 'Fwd:']:
+                subject = subject.replace(prefix, '')
+
+            subject = re.sub('[^a-zA-Z ]', '', subject).strip().lower()
+
+            for word in subject.split(' '):
+                if word:
+                    if word not in words:
+                        words[word] = 0
+                    words[word] += 1
+
+        for word in sorted(words, key=words.get, reverse=True):
+            print word, words[word]
 
     def thread_durations(self):
         """Returns a pie chart showing grouped thread duration information. A "thread" must consist of more than one
