@@ -280,6 +280,8 @@ class Graph:
     """Creates offline plotly graphs using imported data from sqlite.
     """
     def __init__(self):
+        self.report = 'Mail'
+
         self.config = ConfigParser.ConfigParser()
         self.config.readfp(open('settings.defaults.cfg'))
         self.config.read(['settings.cfg'])
@@ -291,52 +293,6 @@ class Graph:
             c = self.conn.cursor()
             c.execute('''SELECT anon_address FROM address_key WHERE real_address = ?;''', (self.owner_email,))
             self.owner_email = c.fetchone()[0]
-
-    def all_graphs(self):
-        """Creates a page containing all available Mail graphs. The HTML file (mail.html) and supporting JavaScript file
-        (mail.js) are both saved to the local directory. The page relies on two JavaScript libraries which are included
-        in the `resources/js` directory of Takeout Inspector:
-          - Plotly: https://plot.ly/javascript/
-          - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
-        """
-        reports = ['day_of_week', 'label_usage', 'thread_durations', 'thread_sizes',
-                   'time_of_day', 'top_recipients', 'top_senders']
-
-        with open('mail.html', 'w') as html, open('mail.js', 'w') as js:
-            html.write(''.join([
-                '<!DOCTYPE HTML>\n',
-                '<html>\n',
-                '<head>\n',
-                '\t<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />\n',
-                '\t<title>Mail | Takeout Inspector</title>\n',
-                '</head>\n',
-                '<body style="max-width: 800px; margin: 0 auto;">\n',
-                '<h1 style="text-align: center;">Mail Statistics</h1>\n'
-            ]))
-
-            for report in reports:
-                output = getattr(self, report)()
-                div, javascript = output.split('<script type="text/javascript">')
-                html.write(div + '\n')
-
-                js.write(''.join([
-                    'new Waypoint({\n',
-                    "\telement: document.getElementById('" + div[9:45] + "'),\n",  # String location of div's ID.
-                    '\thandler: function() {\n',
-                    '\t\t' + javascript[:-9] + ';\n',  # Removes </script> from the end of the string.
-                    '\t\tthis.destroy();\n',
-                    '\t},\n',
-                    "\toffset: '100%'\n"
-                    '});\n\n'
-                ]))
-
-            html.write(''.join([
-                '<script src="resources/js/plotly-v1.20.5.min.js"></script>\n',
-                '<script src="resources/js/waypoints-v4.0.1.min.js"></script>\n',
-                '<script src="mail.js"></script>\n',
-                '</body>\n',
-                '</html>',
-            ]))
 
     def day_of_week(self):
         """Returns a graph showing email activity (sent/received) by day of the week.
@@ -521,7 +477,7 @@ class Graph:
         )
 
     def subject_word_cloud(self):
-        """Returns word cloud of words used in email subjects.
+        """Returns DIV for a word cloud of words used in email subjects saved to an image file
         """
         c = self.conn.cursor()
 
@@ -554,7 +510,16 @@ class Graph:
             width=600,
         )
         cloud.generate_from_frequencies(common_words)
-        cloud.to_image('subject_word_cloud.png')
+
+        # TODO: Remove assumptions about location here - this should all be handled by report.py.
+        file_path = 'resources/img/mail_subject_word_cloud.png'
+        cloud.to_file(self.config.get('report', 'destination') + file_path)
+        return '''
+            <div id="mail_subject_word_cloud" style="text-align: center;">
+                <h2>Subject Word Cloud</h2>
+                <img src="''' + file_path + '''" alt="Mail Subject Word Cloud" />
+            </div>
+        '''
 
     def thread_durations(self):
         """Returns a pie chart showing grouped thread duration information. A "thread" must consist of more than one

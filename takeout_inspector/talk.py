@@ -44,6 +44,8 @@ class Graph:
     """Creates offline plotly graphs using imported data from sqlite.
     """
     def __init__(self):
+        self.report = 'Talk'
+
         self.config = ConfigParser.ConfigParser()
         self.config.readfp(open('settings.defaults.cfg'))
         self.config.read(['settings.cfg'])
@@ -55,52 +57,6 @@ class Graph:
             c = self.conn.cursor()
             c.execute('''SELECT anon_address FROM address_key WHERE real_address = ?;''', (self.owner_email,))
             self.owner_email = c.fetchone()[0]
-
-    def all_graphs(self):
-        """Creates a page containing all available Talk graphs. The HTML file (talk.html) and supporting JavaScript file
-        (talk.js) are both saved to the local directory. The page relies on two JavaScript libraries which are included
-        in the `resources/js` directory of Takeout Inspector:
-          - Plotly: https://plot.ly/javascript/
-          - WayPoints: http://imakewebthings.com/waypoints/ (Note: the JS file erroneously states v4.0.0 but is v4.0.1.)
-        """
-        reports = ['talk_clients', 'talk_days', 'talk_durations', 'talk_thread_sizes', 'talk_times',
-                   'talk_top_chatters', 'talk_vs_email', 'talk_vs_email_cumulative']
-
-        with open('talk.html', 'w') as html, open('talk.js', 'w') as js:
-            html.write(''.join([
-                '<!DOCTYPE HTML>\n',
-                '<html>\n',
-                '<head>\n',
-                '\t<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />\n',
-                '\t<title>Talk | Takeout Inspector</title>\n',
-                '</head>\n',
-                '<body style="max-width: 800px; margin: 0 auto;">\n',
-                '<h1 style="text-align: center;">Talk Statistics</h1>\n'
-            ]))
-
-            for report in reports:
-                output = getattr(self, report)()
-                div, javascript = output.split('<script type="text/javascript">')
-                html.write(div + '\n')
-
-                js.write(''.join([
-                    'new Waypoint({\n',
-                    "\telement: document.getElementById('" + div[9:45] + "'),\n",  # String location of div's ID.
-                    '\thandler: function() {\n',
-                    '\t\t' + javascript[:-9] + ';\n',  # Removes </script> from the end of the string.
-                    '\t\tthis.destroy();\n',
-                    '\t},\n',
-                    "\toffset: '100%'\n"
-                    '});\n\n'
-                ]))
-
-            html.write(''.join([
-                '<script src="resources/js/plotly-v1.20.5.min.js"></script>\n',
-                '<script src="resources/js/waypoints-v4.0.1.min.js"></script>\n',
-                '<script src="talk.js"></script>\n',
-                '</body>\n',
-                '</html>',
-            ]))
 
     def talk_clients(self):
         """Returns a pie chart showing distribution of services/client used (based on known resourceparts). This likely
