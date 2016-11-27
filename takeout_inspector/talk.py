@@ -29,6 +29,7 @@ import plotly.offline as py
 import plotly.graph_objs as go
 import sqlite3
 
+from . import utils
 from collections import OrderedDict
 
 
@@ -102,7 +103,7 @@ class Graph:
             )
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Chat Clients'
         del layout_args['xaxis']
         del layout_args['yaxis']
@@ -157,7 +158,7 @@ class Graph:
             ),
         )
 
-        layout = self._default_layout_options()
+        layout = utils.plotly_default_layout_options()
         layout['barmode'] = 'stack'
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Chat (vs. Email) Days'
@@ -207,7 +208,7 @@ class Graph:
             )
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Chat Durations'
         del layout_args['xaxis']
         del layout_args['yaxis']
@@ -256,7 +257,7 @@ class Graph:
             text=descriptions
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Chat Thread Sizes'
         layout_args['hovermode'] = 'closest'
         layout_args['height'] = 800
@@ -302,7 +303,7 @@ class Graph:
             fill='tozeroy',
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Chat Times (UTC)'
         layout_args['xaxis']['title'] = 'Hour of day (UTC)'
         layout_args['yaxis']['title'] = 'Chat messages'
@@ -358,7 +359,7 @@ class Graph:
             ),
         )
 
-        layout = self._default_layout_options()
+        layout = utils.plotly_default_layout_options()
         layout['barmode'] = 'grouped'
         layout['height'] = longest_address * 15
         layout['margin']['b'] = longest_address * self.config.getfloat('font', 'size') / 2
@@ -420,7 +421,7 @@ class Graph:
             ),
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Chat vs. Email Usage'
         layout_args['xaxis']['title'] = 'Year and month'
         layout_args['yaxis']['title'] = 'Number of messages'
@@ -444,28 +445,3 @@ class Graph:
         """Returns the results of the talk_vs_email method with the cumulative argument set to True.
         """
         return self.talk_vs_email(cumulative=True)
-
-    def _default_layout_options(self):
-        """Prepares default layout options for all graphs.
-        """
-        return dict(
-            font=dict(
-                color=self.config.get('color', 'text'),
-                family=self.config.get('font', 'family'),
-                size=self.config.get('font', 'size'),
-            ),
-            margin=dict(
-                b=50,
-                t=50,
-            ),
-            xaxis=dict(
-                titlefont=dict(
-                    color=self.config.get('color', 'text_lighter'),
-                )
-            ),
-            yaxis=dict(
-                titlefont=dict(
-                    color=self.config.get('color', 'text_lighter'),
-                ),
-            ),
-        )

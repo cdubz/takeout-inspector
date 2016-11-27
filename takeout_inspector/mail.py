@@ -35,6 +35,7 @@ import re
 import sqlite3
 import wordcloud as wc
 
+from . import utils
 from collections import OrderedDict
 from datetime import datetime
 
@@ -338,7 +339,7 @@ class Graph:
             ),
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['barmode'] = 'stack'
         layout_args['title'] = 'Activity by Day of the Week'
         layout_args['xaxis']['title'] = 'Day of the week'
@@ -423,7 +424,7 @@ class Graph:
 #        data = go.Data([trace1, trace2])
 #
 #        hide_axis = dict(showline=False, zeroline=False, showgrid=False, showticklabels=False, title='')
-#        layout_args = self._default_layout_options()
+#        layout_args = utils.plotly_default_layout_options()
 #        layout_args['title'] = 'Labels Network Graph'
 #        layout_args['hovermode'] = 'closest'
 #        layout_args['showlegend'] = False
@@ -463,7 +464,7 @@ class Graph:
             )
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Label Usage'
         del layout_args['xaxis']
         del layout_args['yaxis']
@@ -563,7 +564,7 @@ class Graph:
             )
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Thread Durations'
         del layout_args['xaxis']
         del layout_args['yaxis']
@@ -603,7 +604,7 @@ class Graph:
             ),
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Thread Sizes'
         layout_args['xaxis']['title'] = 'Number of messages'
         layout_args['yaxis']['title'] = 'Number of threads'
@@ -656,7 +657,7 @@ class Graph:
             ),
         )
 
-        layout_args = self._default_layout_options()
+        layout_args = utils.plotly_default_layout_options()
         layout_args['title'] = 'Activity by Hour of the Day (UTC)'
         layout_args['xaxis']['title'] = 'Hour of the day (UTC)'
         layout_args['yaxis']['title'] = 'Number of emails'
@@ -706,7 +707,7 @@ class Graph:
             orientation='h',
         )
 
-        layout = self._default_layout_options()
+        layout = utils.plotly_default_layout_options()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Recipients'
@@ -754,7 +755,7 @@ class Graph:
             orientation='h',
         )
 
-        layout = self._default_layout_options()
+        layout = utils.plotly_default_layout_options()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
         layout['margin'] = go.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Senders'
@@ -765,29 +766,4 @@ class Graph:
             go.Figure(data=[go.Bar(**data)], layout=go.Layout(**layout)),
             output_type='div',
             include_plotlyjs=False,
-        )
-
-    def _default_layout_options(self):
-        """Prepares default layout options for all graphs.
-        """
-        return dict(
-            font=dict(
-                color=self.config.get('color', 'text'),
-                family=self.config.get('font', 'family'),
-                size=self.config.get('font', 'size'),
-            ),
-            margin=dict(
-                b=50,
-                t=50,
-            ),
-            xaxis=dict(
-                titlefont=dict(
-                    color=self.config.get('color', 'text_lighter'),
-                )
-            ),
-            yaxis=dict(
-                titlefont=dict(
-                    color=self.config.get('color', 'text_lighter'),
-                ),
-            ),
         )
