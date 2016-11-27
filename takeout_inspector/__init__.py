@@ -27,3 +27,5 @@ SOFTWARE.
 from takeout_inspector import mail, report, talk
 
 __author__ = 'Christopher Charbonneau Wells'
+__copyright__ = 'Copyright (c) 2016 Christopher Charbonneau Wells'
+__license__ = 'MIT'
