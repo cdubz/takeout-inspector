@@ -24,11 +24,11 @@ SOFTWARE.
 
 """
 import ConfigParser
-import inspect
 import os
-import shutil
 
 from . import mail, talk
+from inspect import getmembers, getargspec, ismethod
+from shutil import copytree
 
 __all__ = ['Report']
 
@@ -45,7 +45,7 @@ class Report:
 
         if not os.path.isdir(self.base_dir):
             os.mkdir(self.base_dir)
-            shutil.copytree('resources', self.base_dir + '/resources')
+            copytree('resources', self.base_dir + '/resources')
 
     def generate(self):
         """Creates a page containing all available Talk graphs. The HTML file (talk.html) and supporting JavaScript file
@@ -57,7 +57,7 @@ class Report:
         graph_classes = [mail.Graph(), talk.Graph()]
         for graph_class in graph_classes:
             report = graph_class.__dict__['report']
-            methods = inspect.getmembers(graph_class, inspect.ismethod)
+            methods = getmembers(graph_class, ismethod)
 
             html_file = self.base_dir + report.lower() + '.html'
             js_file = self.base_dir + '/resources/js/' + report.lower() + '.js'
@@ -77,7 +77,15 @@ class Report:
                 for method in methods:
                     if method[0][0] == '_':
                         continue
-                    output = method[1]()
+
+                    args = {}
+                    argspec = getargspec(method[1])
+                    if 'base_dir' in argspec.args:
+                        args['base_dir'] = self.base_dir
+                    if 'rel_dir' in argspec.args:
+                        args['rel_dir'] = 'resources/misc/'
+
+                    output = method[1](**args)
 
                     if type(output) is dict:
                         if 'html' in output:

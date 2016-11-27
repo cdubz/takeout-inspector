@@ -466,8 +466,9 @@ class Graph:
 
         return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
-    def subject_word_cloud(self):
-        """Returns DIV for a word cloud of words used in email subjects saved to an image file
+    def subject_word_cloud(self, base_dir='./', rel_dir=''):
+        """Returns HTML for a word cloud of words used in email subjects. The word cloud image file is saved to
+        `base_dir` + `rel_dir` + `subject_word_cloud.png` and linked in HTML as `rel_dir` + `subject_word_cloud.png`.
         """
         c = self.conn.cursor()
 
@@ -501,15 +502,14 @@ class Graph:
         )
         cloud.generate_from_frequencies(common_words)
 
-        # TODO: Remove assumptions about location here - this should all be handled by report.py.
-        file_path = 'resources/img/mail_subject_word_cloud.png'
-        cloud.to_file(self.config.get('report', 'destination') + file_path)
+        file_name = 'mail_subject_word_cloud.png'
+        cloud.to_file(base_dir + rel_dir + file_name)
         return {'html': '''
             <div id="mail_subject_word_cloud" style="text-align: center;">
                 <h2>Subject Word Cloud</h2>
-                <img src="{file_path}" alt="Mail Subject Word Cloud" />
+                <img src="{rel_path}" alt="Mail Subject Word Cloud" />
             </div>
-        '''.format(file_path=file_path)}
+        '''.format(rel_path=rel_dir + file_name)}
 
     def thread_durations(self):
         """Returns a pie chart showing grouped thread duration information. A "thread" must consist of more than one
