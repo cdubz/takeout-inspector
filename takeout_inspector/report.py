@@ -28,7 +28,9 @@ import inspect
 import os
 import shutil
 
-from takeout_inspector import mail, talk
+from . import mail, talk
+
+__all__ = ['Report']
 
 
 class Report:

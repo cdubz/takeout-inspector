@@ -32,6 +32,8 @@ import sqlite3
 from . import utils
 from collections import OrderedDict
 
+__all__ = ['Import', 'Graph']
+
 
 class Import:
     """Print a message noting that Talk relies on Mail's import data.

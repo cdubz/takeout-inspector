@@ -25,6 +25,7 @@ SOFTWARE.
 """
 import ConfigParser
 
+__all__ = ['plotly_default_layout_options']
 
 config = ConfigParser.ConfigParser()
 config.readfp(open('settings.defaults.cfg'))
