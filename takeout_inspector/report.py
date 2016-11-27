@@ -79,22 +79,11 @@ class Report:
                         continue
                     output = method[1]()
 
-                    try:
-                        div, javascript = output.split('<script type="text/javascript">')
-                        js.write(''.join([
-                            'new Waypoint({\n',
-                            "\telement: document.getElementById('" + div[9:45] + "'),\n",  # String location of div ID.
-                            '\thandler: function() {\n',
-                            '\t\t' + javascript[:-9] + ';\n',  # Removes </script> from the end of the string.
-                            '\t\tthis.destroy();\n',
-                            '\t},\n',
-                            "\toffset: '100%'\n"
-                            '});\n\n'
-                        ]))
-                    except ValueError:
-                        div = output
-                    finally:
-                        html.write(div + '\n')
+                    if type(output) is dict:
+                        if 'html' in output:
+                            html.write(output['html'] + '\n')
+                        if 'js' in output:
+                            js.write(output['js'] + '\n')
 
                 html.write(''.join([
                     '<script src="resources/js/plotly-v1.20.5.min.js"></script>\n',

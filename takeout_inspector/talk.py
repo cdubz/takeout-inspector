@@ -25,11 +25,10 @@ SOFTWARE.
 """
 import calendar
 import ConfigParser
-import plotly.offline as py
-import plotly.graph_objs as go
+import plotly.graph_objs as pgo
 import sqlite3
 
-from . import utils
+from .utils import *
 from collections import OrderedDict
 
 __all__ = ['Import', 'Graph']
@@ -94,7 +93,7 @@ class Graph:
             if clients[client] is 0:
                 del clients[client]
 
-        trace = go.Pie(
+        trace = pgo.Pie(
             labels=clients.keys(),
             values=clients.values(),
             marker=dict(
@@ -105,18 +104,14 @@ class Graph:
             )
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Chat Clients'
         del layout_args['xaxis']
         del layout_args['yaxis']
 
-        layout = go.Layout(**layout_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
     def talk_days(self):
         """Returns a stacked bar chart showing percentage of chats and emails on each day of the week.
@@ -141,7 +136,7 @@ class Graph:
             talk_messages[dow] = row[1]
             email_messages[dow] = row[2]
 
-        chats_trace = go.Bar(
+        chats_trace = pgo.Bar(
             x=talk_messages.keys(),
             y=talk_messages.values(),
             text=talk_percentages.values(),
@@ -150,7 +145,7 @@ class Graph:
                 color=self.config.get('color', 'primary'),
             ),
         )
-        emails_trace = go.Bar(
+        emails_trace = pgo.Bar(
             x=email_messages.keys(),
             y=email_messages.values(),
             text=email_percentages.values(),
@@ -160,18 +155,14 @@ class Graph:
             ),
         )
 
-        layout = utils.plotly_default_layout_options()
+        layout = plotly_default_layout_options()
         layout['barmode'] = 'stack'
-        layout['margin'] = go.Margin(**layout['margin'])
+        layout['margin'] = pgo.Margin(**layout['margin'])
         layout['title'] = 'Chat (vs. Email) Days'
         layout['xaxis']['title'] = 'Day of the week'
         layout['yaxis']['title'] = 'Messages exchanged'
 
-        return py.plot(
-            go.Figure(data=[chats_trace, emails_trace], layout=go.Layout(**layout)),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[chats_trace, emails_trace], layout=pgo.Layout(**layout)))
 
     def talk_durations(self):
         """Returns a plotly pie chart showing grouped chat duration information.
@@ -199,7 +190,7 @@ class Graph:
             else:
                 data['> 1 hr.'] += 1
 
-        trace = go.Pie(
+        trace = pgo.Pie(
             labels=data.keys(),
             values=data.values(),
             marker=dict(
@@ -210,18 +201,14 @@ class Graph:
             )
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Chat Durations'
         del layout_args['xaxis']
         del layout_args['yaxis']
 
-        layout = go.Layout(**layout_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
     def talk_thread_sizes(self):
         """Returns a plotly scatter/bubble graph showing the sizes (by message count) of chat thread over time.
@@ -249,7 +236,7 @@ class Graph:
                                 '<br>Participants:<br> - ' + str(row[3]).replace(',', '<br> - ')
                                 )
 
-        trace = go.Scatter(
+        trace = pgo.Scatter(
             x=dates,
             y=messages,
             mode='markers',
@@ -259,20 +246,16 @@ class Graph:
             text=descriptions
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Chat Thread Sizes'
         layout_args['hovermode'] = 'closest'
         layout_args['height'] = 800
-        layout_args['margin'] = go.Margin(**layout_args['margin'])
+        layout_args['margin'] = pgo.Margin(**layout_args['margin'])
         layout_args['xaxis']['title'] = 'Date'
         layout_args['yaxis']['title'] = 'Messages in thread'
-        layout = go.Layout(**layout_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
     def talk_times(self):
         """Returns a plotly graph showing chat habits by hour of the day (UTC).
@@ -305,19 +288,15 @@ class Graph:
             fill='tozeroy',
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Chat Times (UTC)'
         layout_args['xaxis']['title'] = 'Hour of day (UTC)'
         layout_args['yaxis']['title'] = 'Chat messages'
 
-        trace = go.Scatter(**data_args)
-        layout = go.Layout(**layout_args)
+        trace = pgo.Scatter(**data_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
     def talk_top_chatters(self, limit=10):
         """Returns a plotly bar graph showing top chat senders with an email comparison.
@@ -344,7 +323,7 @@ class Graph:
             emails[row[0]] = row[2]
             longest_address = max(longest_address, len(row[0]))
 
-        chats_trace = go.Bar(
+        chats_trace = pgo.Bar(
             x=chats.keys(),
             y=chats.values(),
             name='Chat messages',
@@ -352,7 +331,7 @@ class Graph:
                 color=self.config.get('color', 'primary'),
             ),
         )
-        emails_trace = go.Bar(
+        emails_trace = pgo.Bar(
             x=emails.keys(),
             y=emails.values(),
             name='Email messages',
@@ -361,20 +340,16 @@ class Graph:
             ),
         )
 
-        layout = utils.plotly_default_layout_options()
+        layout = plotly_default_layout_options()
         layout['barmode'] = 'grouped'
         layout['height'] = longest_address * 15
         layout['margin']['b'] = longest_address * self.config.getfloat('font', 'size') / 2
-        layout['margin'] = go.Margin(**layout['margin'])
+        layout['margin'] = pgo.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Chatters'
         layout['xaxis']['title'] = 'Sender address'
         layout['yaxis']['title'] = 'Messages received from'
 
-        return py.plot(
-            go.Figure(data=[chats_trace, emails_trace], layout=go.Layout(**layout)),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[chats_trace, emails_trace], layout=pgo.Layout(**layout)))
 
     def talk_vs_email(self, cumulative=False):
         """Returns a plotly graph showing chat vs. email usage over time (by year and month).
@@ -423,7 +398,7 @@ class Graph:
             ),
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Chat vs. Email Usage'
         layout_args['xaxis']['title'] = 'Year and month'
         layout_args['yaxis']['title'] = 'Number of messages'
@@ -433,15 +408,11 @@ class Graph:
             talk_args['fill'] = 'tonexty'
             email_args['fill'] = 'tozeroy'
 
-        talk_trace = go.Scatter(**talk_args)
-        email_trace = go.Scatter(**email_args)
-        layout = go.Layout(**layout_args)
+        talk_trace = pgo.Scatter(**talk_args)
+        email_trace = pgo.Scatter(**email_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[talk_trace, email_trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[talk_trace, email_trace], layout=layout))
 
     def talk_vs_email_cumulative(self):
         """Returns the results of the talk_vs_email method with the cumulative argument set to True.

@@ -24,8 +24,9 @@ SOFTWARE.
 
 """
 import ConfigParser
+import plotly.offline as py
 
-__all__ = ['plotly_default_layout_options']
+__all__ = ['plotly_default_layout_options', 'plotly_output']
 
 config = ConfigParser.ConfigParser()
 config.readfp(open('settings.defaults.cfg'))
@@ -56,3 +57,26 @@ def plotly_default_layout_options():
             ),
         ),
     )
+
+
+def plotly_output(figure):
+    """Plots a Plotly figure and returns a dict with html and javascript for the report.
+    """
+    output = py.plot(figure, output_type='div', include_plotlyjs=False,)
+    div, plotly_js = output.split('<script type="text/javascript">')
+
+    waypoints_js = '''
+    new Waypoint({{
+        element: document.getElementById('{div_id}'),
+        handler: function() {{
+            {javascript}
+            this.destroy();
+        }},
+        offset: '100%'
+    }});
+    '''.format(
+        div_id=div[9:45],  # String location of div ID.
+        javascript=plotly_js[:-9]  # Removes </script> from the end of the string
+    )
+
+    return {'html': div, 'js': waypoints_js}

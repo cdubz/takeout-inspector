@@ -29,13 +29,12 @@ import ConfigParser
 import email
 import mailbox
 import names
-import plotly.offline as py
-import plotly.graph_objs as go
+import plotly.graph_objs as pgo
 import re
 import sqlite3
 import wordcloud as wc
 
-from . import utils
+from .utils import *
 from collections import OrderedDict
 from datetime import datetime
 
@@ -341,21 +340,17 @@ class Graph:
             ),
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['barmode'] = 'stack'
         layout_args['title'] = 'Activity by Day of the Week'
         layout_args['xaxis']['title'] = 'Day of the week'
         layout_args['yaxis']['title'] = 'Number of emails'
 
-        sent_trace = go.Bar(**sent_args)
-        received_trace = go.Bar(**received_args)
-        layout = go.Layout(**layout_args)
+        sent_trace = pgo.Bar(**sent_args)
+        received_trace = pgo.Bar(**received_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[sent_trace, received_trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[sent_trace, received_trace], layout=layout))
 
 #    def label_network(self):
 #        """Returns a network graph of non-default labels.
@@ -403,42 +398,38 @@ class Graph:
 #            Xe += [layt[e[0]][0], layt[e[1]][0], None]
 #            Ye += [layt[e[0]][1], layt[e[1]][1], None]
 #
-#        trace1 = go.Scatter(
+#        trace1 = pgo.Scatter(
 #            x=Xe,
 #            y=Ye,
 #            mode='lines',
-#            line=go.Line(color='rgb(210,210,210)', width=1),
+#            line=pgo.Line(color='rgb(210,210,210)', width=1),
 #            hoverinfo='none'
 #        )
-#        trace2 = go.Scatter(
+#        trace2 = pgo.Scatter(
 #            x=Xn,
 #            y=Yn,
 #            mode='markers',
-#            marker=go.Marker(
+#            marker=pgo.Marker(
 #                symbol='dot',
 #                size=5,
 #                color='#6959CD',
-#                line=go.Line(color=self.config.get('color', 'primary'), width=0.5)
+#                line=pgo.Line(color=self.config.get('color', 'primary'), width=0.5)
 #            ),
 #            text=labels,
 #            hoverinfo='text'
 #        )
-#        data = go.Data([trace1, trace2])
+#        data = pgo.Data([trace1, trace2])
 #
 #        hide_axis = dict(showline=False, zeroline=False, showgrid=False, showticklabels=False, title='')
-#        layout_args = utils.plotly_default_layout_options()
+#        layout_args = plotly_default_layout_options()
 #        layout_args['title'] = 'Labels Network Graph'
 #        layout_args['hovermode'] = 'closest'
 #        layout_args['showlegend'] = False
-#        layout_args['xaxis'] = go.XAxis(hide_axis)
-#        layout_args['yaxis'] = go.YAxis(hide_axis)
-#        layout = go.Layout(**layout_args)
+#        layout_args['xaxis'] = pgo.XAxis(hide_axis)
+#        layout_args['yaxis'] = pgo.YAxis(hide_axis)
+#        layout = pgo.Layout(**layout_args)
 #
-#        return py.plot(
-#            go.Figure(data=data, layout=layout),
-#            output_type='div',
-#            include_plotlyjs=False,
-#        )
+#        return plotly_output(pgo.Figure(data=data, layout=layout))
 
     def label_usage(self):
         """Returns a pie chart showing usage information for labels.
@@ -455,7 +446,7 @@ class Graph:
                     counts[label] = 0
                 counts[label] += 1
 
-        trace = go.Pie(
+        trace = pgo.Pie(
             labels=counts.keys(),
             values=counts.values(),
             marker=dict(
@@ -466,18 +457,14 @@ class Graph:
             )
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Label Usage'
         del layout_args['xaxis']
         del layout_args['yaxis']
 
-        layout = go.Layout(**layout_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
     def subject_word_cloud(self):
         """Returns DIV for a word cloud of words used in email subjects saved to an image file
@@ -517,12 +504,12 @@ class Graph:
         # TODO: Remove assumptions about location here - this should all be handled by report.py.
         file_path = 'resources/img/mail_subject_word_cloud.png'
         cloud.to_file(self.config.get('report', 'destination') + file_path)
-        return '''
+        return {'html': '''
             <div id="mail_subject_word_cloud" style="text-align: center;">
                 <h2>Subject Word Cloud</h2>
-                <img src="''' + file_path + '''" alt="Mail Subject Word Cloud" />
+                <img src="{file_path}" alt="Mail Subject Word Cloud" />
             </div>
-        '''
+        '''.format(file_path=file_path)}
 
     def thread_durations(self):
         """Returns a pie chart showing grouped thread duration information. A "thread" must consist of more than one
@@ -555,7 +542,7 @@ class Graph:
             else:
                 data['more than 2 weeks'] += 1
 
-        trace = go.Pie(
+        trace = pgo.Pie(
             labels=data.keys(),
             values=data.values(),
             marker=dict(
@@ -566,18 +553,14 @@ class Graph:
             )
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Thread Durations'
         del layout_args['xaxis']
         del layout_args['yaxis']
 
-        layout = go.Layout(**layout_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[trace], layout=layout))
 
     def thread_sizes(self):
         """Returns a graph showing thread size information. A "thread" must consist of more than one email.
@@ -606,17 +589,13 @@ class Graph:
             ),
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Thread Sizes'
         layout_args['xaxis']['title'] = 'Number of messages'
         layout_args['yaxis']['title'] = 'Number of threads'
-        layout = go.Layout(**layout_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[go.Scatter(**data)], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[pgo.Scatter(**data)], layout=layout))
 
     def time_of_day(self):
         """Returns a graph showing email activity (sent/received) by time of day.
@@ -659,20 +638,16 @@ class Graph:
             ),
         )
 
-        layout_args = utils.plotly_default_layout_options()
+        layout_args = plotly_default_layout_options()
         layout_args['title'] = 'Activity by Hour of the Day (UTC)'
         layout_args['xaxis']['title'] = 'Hour of the day (UTC)'
         layout_args['yaxis']['title'] = 'Number of emails'
 
-        sent_trace = go.Scatter(**sent_args)
-        received_trace = go.Scatter(**received_args)
-        layout = go.Layout(**layout_args)
+        sent_trace = pgo.Scatter(**sent_args)
+        received_trace = pgo.Scatter(**received_args)
+        layout = pgo.Layout(**layout_args)
 
-        return py.plot(
-            go.Figure(data=[sent_trace, received_trace], layout=layout),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[sent_trace, received_trace], layout=layout))
 
     def top_recipients(self, limit=10):
         """Returns a bar graph showing the top `limit` number of recipients of emails sent.
@@ -709,18 +684,14 @@ class Graph:
             orientation='h',
         )
 
-        layout = utils.plotly_default_layout_options()
+        layout = plotly_default_layout_options()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
-        layout['margin'] = go.Margin(**layout['margin'])
+        layout['margin'] = pgo.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Recipients'
         layout['xaxis']['title'] = 'Emails sent to'
         layout['yaxis']['title'] = 'Recipient address'
 
-        return py.plot(
-            go.Figure(data=[go.Bar(**data)], layout=go.Layout(**layout)),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[pgo.Bar(**data)], layout=pgo.Layout(**layout)))
 
     def top_senders(self, limit=10):
         """Returns a bar graph showing the top `limit` number of senders of emails received.
@@ -757,15 +728,11 @@ class Graph:
             orientation='h',
         )
 
-        layout = utils.plotly_default_layout_options()
+        layout = plotly_default_layout_options()
         layout['margin']['l'] = longest_address * self.config.getfloat('font', 'size')/1.55
-        layout['margin'] = go.Margin(**layout['margin'])
+        layout['margin'] = pgo.Margin(**layout['margin'])
         layout['title'] = 'Top ' + str(limit) + ' Senders'
         layout['xaxis']['title'] = 'Emails received from'
         layout['yaxis']['title'] = 'Sender address'
 
-        return py.plot(
-            go.Figure(data=[go.Bar(**data)], layout=go.Layout(**layout)),
-            output_type='div',
-            include_plotlyjs=False,
-        )
+        return plotly_output(pgo.Figure(data=[pgo.Bar(**data)], layout=pgo.Layout(**layout)))
