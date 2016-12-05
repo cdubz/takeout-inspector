@@ -45,16 +45,16 @@ class Import:
     """Parses and imports Google Takeout mbox file data in to sqlite.
     """
     def __init__(self, settings_file='settings.cfg'):
-        config = ConfigParser.ConfigParser()
-        config.readfp(open('settings.defaults.cfg'))
-        config.read([settings_file])
+        self.config = ConfigParser.ConfigParser()
+        self.config.readfp(open('settings.defaults.cfg'))
+        self.config.read([settings_file])
 
-        self.email = mailbox.mbox(config.get('mail', 'mbox_file'))
-        self.conn = sqlite3.connect(config.get('mail', 'db_file'))
+        self.email = mailbox.mbox(self.config.get('mail', 'mbox_file'))
+        self.conn = sqlite3.connect(self.config.get('mail', 'db_file'))
 
         self.address_key = {}
 
-        self.anonymize = config.getboolean('mail', 'anonymize')
+        self.anonymize = self.config.getboolean('mail', 'anonymize')
         if self.anonymize:
             self.domain_key = {}
 
