@@ -492,8 +492,9 @@ class Graph:
 
         common_words = []
         for word in sorted(words, key=words.get, reverse=True):
-            if words[word] >= 100:
-                common_words.append([word, words[word]])
+            if len(common_words) == 100:
+                break
+            common_words.append([word, words[word]])
 
         cloud = wc.WordCloud(
             height=600,
